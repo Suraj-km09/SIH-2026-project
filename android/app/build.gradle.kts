@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "ai.mineintel.mineintel_ai"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
