@@ -242,14 +242,19 @@ class _NotificationCenterScreenState
                     ),
                     const SizedBox(width: 8),
                     if (notification.createdAt != null)
-                      Text(
-                        _formatTimestamp(notification.createdAt!),
-                        style: AppTypography.labelSmall.copyWith(
-                          color: AppColors.textTertiary,
+                      Expanded(
+                        child: Text(
+                          _formatTimestamp(notification.createdAt!),
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.textTertiary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    const Spacer(),
-                    if (isUnread)
+                      )
+                    else
+                      const Spacer(),
+                    if (isUnread) ...[
+                      const SizedBox(width: 8),
                       Container(
                         width: 8,
                         height: 8,
@@ -258,6 +263,7 @@ class _NotificationCenterScreenState
                           shape: BoxShape.circle,
                         ),
                       ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 8),

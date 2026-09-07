@@ -434,22 +434,26 @@ class _AuditTrailScreenState extends ConsumerState<AuditTrailScreen> {
                     status: log.isSuccess ? 'success' : 'error',
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceMuted,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '${log.action} • ${log.resource}',
-                      style: AppTypography.labelSmall.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary,
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceMuted,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '${log.action} • ${log.resource}',
+                        style: AppTypography.labelSmall.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Text(
                     _formatTimestamp(log.timestamp),
                     style: AppTypography.labelSmall.copyWith(
@@ -466,26 +470,32 @@ class _AuditTrailScreenState extends ConsumerState<AuditTrailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 4,
                           children: [
-                            const Icon(Icons.account_circle,
-                                size: 14, color: AppColors.textTertiary),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${log.user.username} (${log.user.role ?? "user"})',
-                              style: AppTypography.bodySmall.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.account_circle,
+                                    size: 14, color: AppColors.textTertiary),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${log.user.username} (${log.user.role ?? "user"})',
+                                  style: AppTypography.bodySmall.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                             ),
-                            if (log.ipAddress != null) ...[
-                              const SizedBox(width: 12),
+                            if (log.ipAddress != null)
                               Text(
                                 'IP: ${log.ipAddress}',
                                 style: AppTypography.labelSmall.copyWith(
                                   color: AppColors.textTertiary,
                                 ),
                               ),
-                            ],
                           ],
                         ),
                         if (log.resourceId != null) ...[
@@ -496,11 +506,14 @@ class _AuditTrailScreenState extends ConsumerState<AuditTrailScreen> {
                               color: AppColors.textTertiary,
                               fontFamily: 'monospace',
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
 
                   // Inspect Button
                   OutlinedButton.icon(
@@ -509,7 +522,7 @@ class _AuditTrailScreenState extends ConsumerState<AuditTrailScreen> {
                     label: const Text('Inspect'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
+                          horizontal: 10, vertical: 6),
                       textStyle: AppTypography.labelSmall,
                     ),
                   ),
