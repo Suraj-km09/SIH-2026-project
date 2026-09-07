@@ -316,7 +316,7 @@ class _ExtractionScreenState extends ConsumerState<ExtractionScreen> {
         final isMobile = constraints.maxWidth < 700;
         final itemWidth = count == 1
             ? constraints.maxWidth
-            : (constraints.maxWidth - (count - 1) * 12) / count;
+            : ((constraints.maxWidth - (count - 1) * 12 - 2) / count).floorToDouble();
 
         final cards = [
           _StatCard(

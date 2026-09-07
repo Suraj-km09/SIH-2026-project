@@ -226,7 +226,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
         final isMobile = constraints.maxWidth < 750;
         final itemWidth = count == 1
             ? constraints.maxWidth
-            : (constraints.maxWidth - (count - 1) * 12) / count;
+            : ((constraints.maxWidth - (count - 1) * 12 - 2) / count).floorToDouble();
 
         final cards = [
           _StatCard(label: 'Total Reports', value: '$total', icon: Icons.description, color: AppColors.textPrimary),

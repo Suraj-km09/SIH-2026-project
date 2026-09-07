@@ -501,37 +501,85 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _buildMetricTile(
-                  'Total Issues',
-                  summary.totalIssues.toString(),
-                  AppColors.textPrimary,
-                ),
-              ),
-              Expanded(
-                child: _buildMetricTile(
-                  'Open Issues',
-                  summary.openIssues.toString(),
-                  summary.openIssues > 0 ? AppColors.warning : AppColors.success,
-                ),
-              ),
-              Expanded(
-                child: _buildMetricTile(
-                  'Resolved Issues',
-                  summary.resolvedIssues.toString(),
-                  AppColors.success,
-                ),
-              ),
-              Expanded(
-                child: _buildMetricTile(
-                  'Records Checked',
-                  summary.recordsCount.toString(),
-                  AppColors.textSecondary,
-                ),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, box) {
+              final isSmall = box.maxWidth < 420;
+              if (isSmall) {
+                return Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMetricTile(
+                            'Total Issues',
+                            summary.totalIssues.toString(),
+                            AppColors.textPrimary,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildMetricTile(
+                            'Open Issues',
+                            summary.openIssues.toString(),
+                            summary.openIssues > 0 ? AppColors.warning : AppColors.success,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMetricTile(
+                            'Resolved Issues',
+                            summary.resolvedIssues.toString(),
+                            AppColors.success,
+                          ),
+                        ),
+                        Expanded(
+                          child: _buildMetricTile(
+                            'Records Checked',
+                            summary.recordsCount.toString(),
+                            AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(
+                    child: _buildMetricTile(
+                      'Total Issues',
+                      summary.totalIssues.toString(),
+                      AppColors.textPrimary,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildMetricTile(
+                      'Open Issues',
+                      summary.openIssues.toString(),
+                      summary.openIssues > 0 ? AppColors.warning : AppColors.success,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildMetricTile(
+                      'Resolved Issues',
+                      summary.resolvedIssues.toString(),
+                      AppColors.success,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildMetricTile(
+                      'Records Checked',
+                      summary.recordsCount.toString(),
+                      AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           const Divider(height: 24),
           Text(
@@ -542,14 +590,13 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _buildSeverityPill('Critical', critical, AppColors.error, AppColors.errorBg),
-              const SizedBox(width: 8),
               _buildSeverityPill('Error', error, const Color(0xFFEA580C), const Color(0xFFFFEDD5)),
-              const SizedBox(width: 8),
               _buildSeverityPill('Warning', warning, AppColors.warning, AppColors.warningBg),
-              const SizedBox(width: 8),
               _buildSeverityPill('Info', info, AppColors.accentBlue, const Color(0xFFEFF6FF)),
             ],
           ),
