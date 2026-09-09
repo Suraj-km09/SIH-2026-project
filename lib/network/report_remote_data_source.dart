@@ -130,7 +130,9 @@ class ReportRemoteDataSource {
     final response = await _apiClient.dio.get(
       endpoint,
       options: Options(
-        responseType: fmt == 'json' || fmt == 'csv' ? ResponseType.json : ResponseType.bytes,
+        responseType: fmt == 'json'
+            ? ResponseType.json
+            : (fmt == 'csv' ? ResponseType.plain : ResponseType.bytes),
       ),
     );
     return response.data;

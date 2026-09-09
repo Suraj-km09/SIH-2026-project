@@ -6,6 +6,8 @@ import '../../../widgets/badges/status_chip.dart';
 import '../../../widgets/cards/app_card.dart';
 
 /// Machine-learning Statistical Anomaly & Outlier Detection Card.
+/// Displays 3-sigma deviations, parameter outliers, and operational drop alerts
+/// with interactive statistical deviation meters.
 class AnalyticsAnomaliesCard extends StatelessWidget {
   final List<AnomalyItemModel> anomalies;
 
@@ -41,8 +43,18 @@ class AnalyticsAnomaliesCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Statistical Anomalies & Outliers', style: AppTypography.headlineSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
-                          Text('3-sigma deviations and operational ratio alerts', style: AppTypography.labelSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                          Text(
+                            'Statistical Anomalies & Outliers',
+                            style: AppTypography.headlineSmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            '3-sigma deviations and operational ratio alerts from live mining returns',
+                            style: AppTypography.labelSmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ],
                       ),
                     ),
@@ -76,7 +88,7 @@ class AnalyticsAnomaliesCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.surfaceMuted,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -116,61 +128,226 @@ class AnalyticsAnomaliesCard extends StatelessWidget {
                           : (isWarn ? AppColors.warningBorder : AppColors.borderSubtle),
                     ),
                   ),
-                  child: Row(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        isCrit
-                            ? Icons.error_outline
-                            : (isWarn ? Icons.warning_amber_rounded : Icons.info_outline),
-                        size: 20,
-                        color: isCrit
-                            ? AppColors.error
-                            : (isWarn ? AppColors.warning : AppColors.info),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            isCrit
+                                ? Icons.error_outline
+                                : (isWarn ? Icons.warning_amber_rounded : Icons.info_outline),
+                            size: 20,
+                            color: isCrit
+                                ? AppColors.error
+                                : (isWarn ? AppColors.warning : AppColors.info),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    item.type.replaceAll('_', ' '),
-                                    style: AppTypography.labelLarge.copyWith(
-                                      fontWeight: FontWeight.w700,
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        item.type.replaceAll('_', ' '),
+                                        style: AppTypography.labelLarge.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
-                                    overflow: TextOverflow.ellipsis,
+                                    StatusChip(status: item.severity, fontSize: 10),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  children: [
+                                    if (item.parameter != null)
+                                      _buildTag(Icons.tune_rounded, item.parameter!),
+                                    if (item.period != null && item.period!.isNotEmpty)
+                                      _buildTag(Icons.calendar_today_outlined, item.period!),
+                                    if (item.documentName != null)
+                                      _buildTag(Icons.description_outlined, item.documentName!),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  item.details,
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.textPrimary,
                                   ),
                                 ),
-                                StatusChip(status: item.severity, fontSize: 10),
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Location: ${item.mine}',
-                              style: AppTypography.labelSmall.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              item.details,
-                              style: AppTypography.bodySmall.copyWith(
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
+
+                      // Visual Statistical Deviation Gauge (for Z-scores or percentage drops)
+                      if (item.zScore != null) ...[
+                        const SizedBox(height: 10),
+                        _buildZScoreDeviationMeter(item.zScore!),
+                      ] else if (item.percentageChange != null) ...[
+                        const SizedBox(height: 10),
+                        _buildPercentageDropMeter(item.percentageChange!),
+                      ],
                     ],
                   ),
                 );
               },
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTag(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: const Color(0xFF64748B)),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF475569),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildZScoreDeviationMeter(double zScore) {
+    // Meter spans 0 to 6 sigma; 3 sigma threshold marked
+    final ratio = (zScore / 6.0).clamp(0.05, 1.0);
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '3-Sigma Boundary (Critical > 3.0σ)',
+                style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
+              ),
+              Text(
+                'Z-Score: ${zScore.toStringAsFixed(2)}σ',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.error,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Stack(
+            children: [
+              // Base track
+              Container(
+                height: 6,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              // Threshold indicator at 50% (3.0 / 6.0)
+              Positioned(
+                left: 0,
+                right: 0,
+                child: Row(
+                  children: [
+                    const Spacer(),
+                    Container(
+                      width: 2,
+                      height: 6,
+                      color: const Color(0xFFF59E0B),
+                    ),
+                    const Spacer(),
+                  ],
+                ),
+              ),
+              // Z-Score fill
+              FractionallySizedBox(
+                widthFactor: ratio,
+                child: Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: zScore >= 3.0 ? const Color(0xFFDC2626) : const Color(0xFFF59E0B),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPercentageDropMeter(double pctChange) {
+    final absDrop = pctChange.abs().clamp(0.0, 100.0);
+    final ratio = absDrop / 100.0;
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Operational Period Variance',
+                style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
+              ),
+              Text(
+                '${pctChange.toStringAsFixed(1)}%',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.error,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: ratio,
+              minHeight: 6,
+              backgroundColor: const Color(0xFFE2E8F0),
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFDC2626)),
+            ),
+          ),
         ],
       ),
     );

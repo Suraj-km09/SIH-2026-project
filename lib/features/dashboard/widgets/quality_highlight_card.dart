@@ -17,6 +17,9 @@ class DashboardQualityHighlightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final mutedBg = isDark ? const Color(0xFF374151) : AppColors.surfaceMuted;
     final qualityScore = stats.avgQualityScore;
     final processedPct = kpis.documentCount > 0
         ? (kpis.processedCount / kpis.documentCount * 100).clamp(0.0, 100.0)
@@ -36,7 +39,7 @@ class DashboardQualityHighlightCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceMuted,
+                        color: mutedBg,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
@@ -81,6 +84,7 @@ class DashboardQualityHighlightCard extends StatelessWidget {
               // Ingestion Throughput Gauge
               Expanded(
                 child: _buildMetricItem(
+                  context,
                   label: 'Pipeline Processed',
                   value: '${kpis.processedCount} / ${kpis.documentCount}',
                   percentage: processedPct,
@@ -91,6 +95,7 @@ class DashboardQualityHighlightCard extends StatelessWidget {
               // Validated Documents Gauge
               Expanded(
                 child: _buildMetricItem(
+                  context,
                   label: 'Rule Validated',
                   value: '${stats.validatedDocuments} / ${stats.totalDocuments}',
                   percentage: stats.totalDocuments > 0
@@ -107,7 +112,7 @@ class DashboardQualityHighlightCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: AppColors.surfaceMuted,
+              color: mutedBg,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -160,18 +165,25 @@ class DashboardQualityHighlightCard extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricItem({
+  Widget _buildMetricItem(
+    BuildContext context, {
     required String label,
     required String value,
     required double percentage,
     required Color barColor,
   }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final metricBg = isDark ? theme.colorScheme.surface : AppColors.background;
+    final metricBorder = isDark ? const Color(0xFF374151) : AppColors.borderSubtle;
+    final progressTrack = isDark ? const Color(0xFF374151) : AppColors.surfaceMuted;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: metricBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: metricBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,7 +197,7 @@ class DashboardQualityHighlightCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: (percentage / 100).clamp(0.0, 1.0),
               minHeight: 6,
-              backgroundColor: AppColors.surfaceMuted,
+              backgroundColor: progressTrack,
               valueColor: AlwaysStoppedAnimation<Color>(barColor),
             ),
           ),

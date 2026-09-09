@@ -179,13 +179,16 @@ class KnowledgeBaseListResponse {
   });
 
   factory KnowledgeBaseListResponse.fromJson(Map<String, dynamic> json) {
-    final list = (json['data'] as List<dynamic>? ?? [])
-        .whereType<Map<String, dynamic>>()
-        .map(KnowledgeBaseDocumentModel.fromJson)
+    final rawData = json['data'];
+    final List<dynamic> rawList = rawData is List ? rawData : [];
+    final list = rawList
+        .whereType<Map>()
+        .map((e) => KnowledgeBaseDocumentModel.fromJson(Map<String, dynamic>.from(e)))
         .toList();
 
-    final metaJson = json['meta'] is Map<String, dynamic>
-        ? json['meta'] as Map<String, dynamic>
+    final metaRaw = json['meta'] ?? json['pagination'];
+    final metaJson = metaRaw is Map
+        ? Map<String, dynamic>.from(metaRaw)
         : <String, dynamic>{};
 
     return KnowledgeBaseListResponse(
@@ -217,7 +220,7 @@ class VectorChunkModel {
       id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
       chunkIndex: (json['chunkIndex'] as num?)?.toInt() ?? 0,
       pageNumber: (json['pageNumber'] as num?)?.toInt() ?? 1,
-      content: json['content'] as String? ?? json['text'] as String? ?? '',
+      content: json['content'] as String? ?? json['text'] as String? ?? json['snippet'] as String? ?? '',
       createdAt: json['createdAt']?.toString(),
     );
   }
@@ -247,23 +250,21 @@ class KnowledgeBaseDetailModel {
   });
 
   factory KnowledgeBaseDetailModel.fromJson(Map<String, dynamic> json) {
-    final data = json.containsKey('data') && json['data'] is Map<String, dynamic>
-        ? json['data'] as Map<String, dynamic>
-        : json;
+    final data = json['data'] is Map ? Map<String, dynamic>.from(json['data'] as Map) : json;
 
-    final docMap = data['document'] is Map<String, dynamic>
-        ? data['document'] as Map<String, dynamic>
+    final docMap = data['document'] is Map
+        ? Map<String, dynamic>.from(data['document'] as Map)
         : <String, dynamic>{};
 
     final chunksRaw = data['chunks'] as List<dynamic>? ?? [];
 
     return KnowledgeBaseDetailModel(
       documentId: docMap['id']?.toString() ?? docMap['_id']?.toString() ?? data['documentId']?.toString() ?? '',
-      documentName: docMap['originalName'] as String? ?? data['documentName'] as String? ?? 'Document',
+      documentName: docMap['originalName'] as String? ?? docMap['filename'] as String? ?? data['documentName'] as String? ?? 'Document',
       chunksCount: (data['chunksCount'] as num?)?.toInt() ?? chunksRaw.length,
       chunks: chunksRaw
-          .whereType<Map<String, dynamic>>()
-          .map(VectorChunkModel.fromJson)
+          .whereType<Map>()
+          .map((e) => VectorChunkModel.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
     );
   }
@@ -285,13 +286,11 @@ class IndexDocumentResponse {
   });
 
   factory IndexDocumentResponse.fromJson(Map<String, dynamic> json) {
-    final data = json.containsKey('data') && json['data'] is Map<String, dynamic>
-        ? json['data'] as Map<String, dynamic>
-        : json;
+    final data = json['data'] is Map ? Map<String, dynamic>.from(json['data'] as Map) : json;
 
     return IndexDocumentResponse(
-      documentId: data['documentId']?.toString() ?? '',
-      documentName: data['documentName'] as String?,
+      documentId: data['documentId']?.toString() ?? data['id']?.toString() ?? data['_id']?.toString() ?? '',
+      documentName: data['documentName'] as String? ?? data['originalName'] as String?,
       chunksIndexed: (data['chunksIndexed'] as num?)?.toInt() ?? (data['chunksCount'] as num?)?.toInt() ?? 0,
       indexedAt: data['indexedAt']?.toString() ?? DateTime.now().toUtc().toIso8601String(),
     );
@@ -326,12 +325,12 @@ class KnowledgeBaseSearchResult {
 
   factory KnowledgeBaseSearchResult.fromJson(Map<String, dynamic> json) {
     return KnowledgeBaseSearchResult(
-      chunkId: json['chunkId']?.toString() ?? json['id']?.toString() ?? '',
+      chunkId: json['chunkId']?.toString() ?? json['_id']?.toString() ?? json['id']?.toString() ?? '',
       documentId: json['documentId']?.toString(),
-      documentName: json['documentName'] as String? ?? 'Mining Document',
+      documentName: json['documentName'] as String? ?? json['originalName'] as String? ?? json['filename'] as String? ?? 'Mining Document',
       pageNumber: (json['pageNumber'] as num?)?.toInt() ?? 1,
-      text: json['text'] as String? ?? json['content'] as String? ?? '',
-      similarity: (json['similarity'] as num?)?.toDouble() ?? 0.0,
+      text: json['snippet'] as String? ?? json['text'] as String? ?? json['content'] as String? ?? '',
+      similarity: (json['similarityScore'] as num?)?.toDouble() ?? (json['similarity'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -363,20 +362,39 @@ class KnowledgeBaseSearchResponse {
   });
 
   factory KnowledgeBaseSearchResponse.fromJson(Map<String, dynamic> json) {
-    final data = json.containsKey('data') && json['data'] is Map<String, dynamic>
-        ? json['data'] as Map<String, dynamic>
-        : json;
+    List<dynamic> resultsRaw = [];
+    if (json['data'] is List) {
+      resultsRaw = json['data'] as List;
+    } else if (json['data'] is Map && (json['data'] as Map)['results'] is List) {
+      resultsRaw = (json['data'] as Map)['results'] as List;
+    } else if (json['data'] is Map && (json['data'] as Map)['data'] is List) {
+      resultsRaw = (json['data'] as Map)['data'] as List;
+    } else if (json['results'] is List) {
+      resultsRaw = json['results'] as List;
+    }
 
-    final resultsRaw = data['results'] as List<dynamic>? ?? [];
+    final queryStr = json['query'] as String? ??
+        (json['data'] is Map ? (json['data'] as Map)['query'] as String? : null) ??
+        '';
+
+    final topKVal = (json['topK'] as num?)?.toInt() ??
+        (json['data'] is Map ? ((json['data'] as Map)['topK'] as num?)?.toInt() : null) ??
+        5;
+
+    final filtersMap = json['filters'] is Map
+        ? Map<String, dynamic>.from(json['filters'] as Map)
+        : (json['data'] is Map && (json['data'] as Map)['filters'] is Map
+            ? Map<String, dynamic>.from((json['data'] as Map)['filters'] as Map)
+            : null);
 
     return KnowledgeBaseSearchResponse(
-      query: data['query'] as String? ?? '',
-      topK: (data['topK'] as num?)?.toInt() ?? 5,
-      filters: data['filters'] is Map<String, dynamic> ? data['filters'] as Map<String, dynamic> : null,
-      totalResults: (data['totalResults'] as num?)?.toInt() ?? resultsRaw.length,
+      query: queryStr,
+      topK: topKVal,
+      filters: filtersMap,
+      totalResults: (json['totalResults'] as num?)?.toInt() ?? resultsRaw.length,
       results: resultsRaw
-          .whereType<Map<String, dynamic>>()
-          .map(KnowledgeBaseSearchResult.fromJson)
+          .whereType<Map>()
+          .map((e) => KnowledgeBaseSearchResult.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
     );
   }

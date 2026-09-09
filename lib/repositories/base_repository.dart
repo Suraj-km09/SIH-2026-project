@@ -27,19 +27,39 @@ abstract class BaseRepository {
   Failure _mapExceptionToFailure(AppException e) {
     if (e is NetworkException) return NetworkFailure(e.message);
     if (e is TimeoutException) return NetworkFailure(e.message);
-    if (e is AuthException) return AuthFailure(e.message);
+    if (e is AuthException) {
+      return AuthFailure(
+        e.message,
+        isIncorrectPassword: e.isIncorrectPassword,
+        isInvalidPassword: e.isInvalidPassword,
+        code: e.code,
+      );
+    }
     if (e is TokenExpiredException) return SessionExpiredFailure(e.message);
-    if (e is PermissionException) return PermissionFailure(e.message);
+    if (e is PermissionException) {
+      return PermissionFailure(
+        e.message,
+        isAccountInactive: e.isAccountInactive,
+        code: e.code,
+      );
+    }
     if (e is NotFoundException) return NotFoundFailure(e.message);
     if (e is ConflictException) {
       return ConflictFailure(
         e.message,
         isDuplicateDocument: e.isDuplicateDocument,
         isAgentConcurrency: e.isAgentConcurrency,
+        code: e.code,
       );
     }
     if (e is ValidationException) {
-      return ValidationFailure(e.message, errors: e.errors);
+      return ValidationFailure(
+        e.message,
+        errors: e.errors,
+        validationMessage: e.validationMessage,
+        fieldErrors: e.fieldErrors,
+        code: e.code,
+      );
     }
     if (e is ServiceUnavailableException) {
       return ServiceUnavailableFailure(e.message);

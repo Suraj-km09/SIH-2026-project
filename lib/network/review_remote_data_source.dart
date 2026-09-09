@@ -14,7 +14,10 @@ class ReviewRemoteDataSource {
     final response = await _apiClient.dio.get(ApiEndpoints.reviewsPending);
     final raw = response.data['data'] ?? response.data;
     if (raw is List) {
-      return raw.map((e) => ReviewItemModel.fromJson(e as Map<String, dynamic>)).toList();
+      return raw
+          .whereType<Map>()
+          .map((e) => ReviewItemModel.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
     }
     return [];
   }
@@ -23,14 +26,20 @@ class ReviewRemoteDataSource {
   Future<ReviewItemModel> getReviewById(String id) async {
     final response = await _apiClient.dio.get(ApiEndpoints.reviewDetail(id));
     final data = response.data['data'] ?? response.data;
-    return ReviewItemModel.fromJson(data as Map<String, dynamic>);
+    final map = data is Map<String, dynamic>
+        ? data
+        : Map<String, dynamic>.from(data as Map);
+    return ReviewItemModel.fromJson(map);
   }
 
   /// POST /api/v1/reviews/:id/approve (Admin only)
   Future<ReportModel> approveReview(String id) async {
     final response = await _apiClient.dio.post(ApiEndpoints.reviewApprove(id));
     final data = response.data['data'] ?? response.data;
-    return ReportModel.fromJson(data as Map<String, dynamic>);
+    final map = data is Map<String, dynamic>
+        ? data
+        : Map<String, dynamic>.from(data as Map);
+    return ReportModel.fromJson(map);
   }
 
   /// POST /api/v1/reviews/:id/reject (Reviewer/Admin)
@@ -40,6 +49,9 @@ class ReviewRemoteDataSource {
       data: {'reason': reason},
     );
     final data = response.data['data'] ?? response.data;
-    return ReportModel.fromJson(data as Map<String, dynamic>);
+    final map = data is Map<String, dynamic>
+        ? data
+        : Map<String, dynamic>.from(data as Map);
+    return ReportModel.fromJson(map);
   }
 }

@@ -185,5 +185,53 @@ void main() {
       expect(resList.length, 1);
       expect((resList.first as Map<String, dynamic>)['correctedValue'], '2.4');
     });
+
+    test('ValidationIssueModel and ValidationSummaryModel safely handle Map/Object documentId without TypeError', () {
+      final jsonIssue = {
+        'id': 'iss_002',
+        'documentId': {
+          '_id': '1788807291803-376382343',
+          'filename': 'Monthly_Production.pdf',
+        },
+        'recordId': {'_id': 'rec_001'},
+        'type': 'math_discrepancy',
+        'severity': 'warning',
+        'field': {'name': 'Coal Dispatch'},
+        'message': 'Volume mismatch',
+        'status': 'open',
+      };
+
+      final issue = ValidationIssueModel.fromJson(jsonIssue);
+      expect(issue.id, 'iss_002');
+      expect(issue.documentId, '1788807291803-376382343');
+      expect(issue.recordId, 'rec_001');
+      expect(issue.field, 'Coal Dispatch');
+
+      final jsonSummary = {
+        'documentId': {
+          '_id': '1788807291803-376382343',
+          'filename': 'Monthly_Production.pdf',
+          'status': 'completed',
+        },
+        'documentName': null,
+        'qualityScore': '95',
+        'avgConfidence': '0.98',
+        'totalIssues': '1',
+        'openIssues': '1',
+        'resolvedIssues': '0',
+        'bySeverity': {'warning': '1'},
+        'issues': [jsonIssue],
+      };
+
+      final summary = ValidationSummaryModel.fromJson(jsonSummary);
+      expect(summary.documentId, '1788807291803-376382343');
+      expect(summary.documentName, 'Monthly_Production.pdf');
+      expect(summary.documentStatus, 'completed');
+      expect(summary.qualityScore, 95);
+      expect(summary.avgConfidence, 0.98);
+      expect(summary.totalIssues, 1);
+      expect(summary.issues.length, 1);
+      expect(summary.issues.first.documentId, '1788807291803-376382343');
+    });
   });
 }

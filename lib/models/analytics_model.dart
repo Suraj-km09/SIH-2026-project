@@ -2,6 +2,26 @@
 /// Conforms strictly to OpenAPI 3.0.3 specification & API_DOCUMENTATION.md.
 library;
 
+double _parseDouble(dynamic val) {
+  if (val == null) return 0.0;
+  if (val is num) return val.toDouble();
+  if (val is String) {
+    final cleaned = val.replaceAll(RegExp(r'[^0-9.-]'), '');
+    return double.tryParse(cleaned) ?? 0.0;
+  }
+  return 0.0;
+}
+
+int _parseInt(dynamic val) {
+  if (val == null) return 0;
+  if (val is num) return val.toInt();
+  if (val is String) {
+    final cleaned = val.replaceAll(RegExp(r'[^0-9-]'), '');
+    return int.tryParse(cleaned) ?? 0;
+  }
+  return 0;
+}
+
 class AnalyticsFilter {
   final String? document;
   final String? mine;
@@ -54,12 +74,64 @@ class AnalyticsFilter {
   }
 }
 
+class PeriodSummaryModel {
+  final String period;
+  final double production;
+  final double dispatch;
+  final double target;
+  final double gap;
+  final String unit;
+  final int recordsCount;
+
+  const PeriodSummaryModel({
+    required this.period,
+    required this.production,
+    required this.dispatch,
+    this.target = 0.0,
+    this.gap = 0.0,
+    this.unit = 'MT',
+    this.recordsCount = 0,
+  });
+
+  factory PeriodSummaryModel.fromJson(Map<String, dynamic> json) {
+    final prod = _parseDouble(json['production'] ?? json['prod']);
+    final disp = _parseDouble(json['dispatch'] ?? json['disp']);
+    final tgt = _parseDouble(json['target'] ?? json['targetProduction']);
+    final g = json['gap'] != null
+        ? _parseDouble(json['gap'])
+        : (json['productionDispatchGap'] != null
+            ? _parseDouble(json['productionDispatchGap'])
+            : (prod - disp));
+
+    return PeriodSummaryModel(
+      period: (json['period'] ?? json['date'] ?? json['label'] ?? '') as String,
+      production: prod,
+      dispatch: disp,
+      target: tgt,
+      gap: g,
+      unit: json['unit'] as String? ?? 'MT',
+      recordsCount: _parseInt(json['recordsCount']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'period': period,
+        'production': production,
+        'dispatch': dispatch,
+        'target': target,
+        'gap': gap,
+        'unit': unit,
+        'recordsCount': recordsCount,
+      };
+}
+
 class AnalyticsOverviewModel {
   final double totalProduction;
   final double totalDispatch;
   final double netGap;
   final double productionTargetAchievement;
   final List<MineProductionModel> topProducingMines;
+  final List<PeriodSummaryModel> periods;
 
   const AnalyticsOverviewModel({
     this.totalProduction = 0.0,
@@ -67,17 +139,44 @@ class AnalyticsOverviewModel {
     this.netGap = 0.0,
     this.productionTargetAchievement = 0.0,
     this.topProducingMines = const [],
+    this.periods = const [],
   });
 
   factory AnalyticsOverviewModel.fromJson(Map<String, dynamic> json) {
+    final prod = _parseDouble(
+      json['totalProduction'] ?? json['production'],
+    );
+    final disp = _parseDouble(
+      json['totalDispatch'] ?? json['dispatch'],
+    );
+    final gap = json['netGap'] != null
+        ? _parseDouble(json['netGap'])
+        : (json['productionDispatchGap'] != null
+            ? _parseDouble(json['productionDispatchGap'])
+            : (prod - disp));
+    final targetAch = _parseDouble(
+      json['productionTargetAchievement'] ??
+          json['achievementRate'] ??
+          json['targetAchievementPct'],
+    );
+    final minesRaw =
+        (json['topProducingMines'] ?? json['mines'] ?? json['topMines'])
+            as List<dynamic>?;
+    final periodsRaw = json['periods'] as List<dynamic>?;
+
     return AnalyticsOverviewModel(
-      totalProduction: (json['totalProduction'] as num?)?.toDouble() ?? 0.0,
-      totalDispatch: (json['totalDispatch'] as num?)?.toDouble() ?? 0.0,
-      netGap: (json['netGap'] as num?)?.toDouble() ?? 0.0,
-      productionTargetAchievement:
-          (json['productionTargetAchievement'] as num?)?.toDouble() ?? 0.0,
-      topProducingMines: (json['topProducingMines'] as List<dynamic>?)
-              ?.map((e) => MineProductionModel.fromJson(e as Map<String, dynamic>))
+      totalProduction: prod,
+      totalDispatch: disp,
+      netGap: gap,
+      productionTargetAchievement: targetAch,
+      topProducingMines: minesRaw
+              ?.whereType<Map>()
+              .map((e) => MineProductionModel.fromJson(Map<String, dynamic>.from(e)))
+              .toList() ??
+          const [],
+      periods: periodsRaw
+              ?.whereType<Map>()
+              .map((e) => PeriodSummaryModel.fromJson(Map<String, dynamic>.from(e)))
               .toList() ??
           const [],
     );
@@ -89,6 +188,7 @@ class AnalyticsOverviewModel {
         'netGap': netGap,
         'productionTargetAchievement': productionTargetAchievement,
         'topProducingMines': topProducingMines.map((e) => e.toJson()).toList(),
+        'periods': periods.map((e) => e.toJson()).toList(),
       };
 }
 
@@ -97,21 +197,54 @@ class AnalyticsKpisModel {
   final double averageConfidence;
   final int verifiedRecords;
   final double targetAchievementPct;
+  final int totalDocuments;
+  final int openIssues;
+  final String averageValidationScore;
 
   const AnalyticsKpisModel({
     this.totalRecords = 0,
     this.averageConfidence = 0.0,
     this.verifiedRecords = 0,
     this.targetAchievementPct = 0.0,
+    this.totalDocuments = 0,
+    this.openIssues = 0,
+    this.averageValidationScore = '',
   });
 
   factory AnalyticsKpisModel.fromJson(Map<String, dynamic> json) {
+    final totalRec = _parseInt(json['totalRecords'] ?? json['records']);
+    final openIss = _parseInt(json['openIssues']);
+    final verified = json['verifiedRecords'] != null
+        ? _parseInt(json['verifiedRecords'])
+        : (json['verified'] != null
+            ? _parseInt(json['verified'])
+            : (openIss > 0 && totalRec >= openIss ? totalRec - openIss : totalRec));
+
+    final rawScore = json['averageValidationScore']?.toString() ?? '';
+    final avgConf = json['averageConfidence'] != null
+        ? _parseDouble(json['averageConfidence'])
+        : (json['avgConfidence'] != null
+            ? _parseDouble(json['avgConfidence'])
+            : (rawScore.isNotEmpty
+                ? _parseDouble(rawScore) / (rawScore.contains('%') ? 100 : 1)
+                : 0.0));
+
+    final tgtAch = _parseDouble(
+      json['targetAchievementPct'] ??
+          json['achievementRate'] ??
+          json['targetAchievement'],
+    );
+
     return AnalyticsKpisModel(
-      totalRecords: (json['totalRecords'] as num?)?.toInt() ?? 0,
-      averageConfidence: (json['averageConfidence'] as num?)?.toDouble() ?? 0.0,
-      verifiedRecords: (json['verifiedRecords'] as num?)?.toInt() ?? 0,
-      targetAchievementPct:
-          (json['targetAchievementPct'] as num?)?.toDouble() ?? 0.0,
+      totalRecords: totalRec,
+      averageConfidence: avgConf,
+      verifiedRecords: verified,
+      targetAchievementPct: tgtAch,
+      totalDocuments: _parseInt(json['totalDocuments'] ?? json['documents']),
+      openIssues: openIss,
+      averageValidationScore: rawScore.isNotEmpty
+          ? rawScore
+          : (avgConf > 0 ? '${(avgConf * 100).toStringAsFixed(0)}%' : ''),
     );
   }
 
@@ -120,28 +253,39 @@ class AnalyticsKpisModel {
         'averageConfidence': averageConfidence,
         'verifiedRecords': verifiedRecords,
         'targetAchievementPct': targetAchievementPct,
+        'totalDocuments': totalDocuments,
+        'openIssues': openIssues,
+        'averageValidationScore': averageValidationScore,
       };
 }
 
 class MineProductionModel {
   final String mine;
   final double production;
+  final int recordsCount;
+  final String unit;
 
   const MineProductionModel({
     required this.mine,
     required this.production,
+    this.recordsCount = 0,
+    this.unit = 'MT',
   });
 
   factory MineProductionModel.fromJson(Map<String, dynamic> json) {
     return MineProductionModel(
       mine: json['mine'] as String? ?? 'Unknown Mine',
-      production: (json['production'] as num?)?.toDouble() ?? 0.0,
+      production: _parseDouble(json['production']),
+      recordsCount: _parseInt(json['recordsCount']),
+      unit: json['unit'] as String? ?? 'MT',
     );
   }
 
   Map<String, dynamic> toJson() => {
         'mine': mine,
         'production': production,
+        'recordsCount': recordsCount,
+        'unit': unit,
       };
 }
 
@@ -157,7 +301,7 @@ class SubsidiaryProductionModel {
   factory SubsidiaryProductionModel.fromJson(Map<String, dynamic> json) {
     return SubsidiaryProductionModel(
       subsidiary: json['subsidiary'] as String? ?? 'Unknown Subsidiary',
-      production: (json['production'] as num?)?.toDouble() ?? 0.0,
+      production: _parseDouble(json['production']),
     );
   }
 
@@ -179,7 +323,7 @@ class PeriodProductionModel {
   factory PeriodProductionModel.fromJson(Map<String, dynamic> json) {
     return PeriodProductionModel(
       period: json['period'] as String? ?? '',
-      production: (json['production'] as num?)?.toDouble() ?? 0.0,
+      production: _parseDouble(json['production']),
     );
   }
 
@@ -203,17 +347,20 @@ class ProductionAnalyticsModel {
   factory ProductionAnalyticsModel.fromJson(Map<String, dynamic> json) {
     return ProductionAnalyticsModel(
       byMine: (json['byMine'] as List<dynamic>?)
-              ?.map((e) => MineProductionModel.fromJson(e as Map<String, dynamic>))
+              ?.whereType<Map>()
+              .map((e) => MineProductionModel.fromJson(Map<String, dynamic>.from(e)))
               .toList() ??
           const [],
       bySubsidiary: (json['bySubsidiary'] as List<dynamic>?)
-              ?.map((e) =>
-                  SubsidiaryProductionModel.fromJson(e as Map<String, dynamic>))
+              ?.whereType<Map>()
+              .map((e) =>
+                  SubsidiaryProductionModel.fromJson(Map<String, dynamic>.from(e)))
               .toList() ??
           const [],
       byPeriod: (json['byPeriod'] as List<dynamic>?)
-              ?.map((e) =>
-                  PeriodProductionModel.fromJson(e as Map<String, dynamic>))
+              ?.whereType<Map>()
+              .map((e) =>
+                  PeriodProductionModel.fromJson(Map<String, dynamic>.from(e)))
               .toList() ??
           const [],
     );
@@ -229,22 +376,30 @@ class ProductionAnalyticsModel {
 class MineDispatchModel {
   final String mine;
   final double dispatch;
+  final int recordsCount;
+  final String unit;
 
   const MineDispatchModel({
     required this.mine,
     required this.dispatch,
+    this.recordsCount = 0,
+    this.unit = 'MT',
   });
 
   factory MineDispatchModel.fromJson(Map<String, dynamic> json) {
     return MineDispatchModel(
       mine: json['mine'] as String? ?? 'Unknown Mine',
-      dispatch: (json['dispatch'] as num?)?.toDouble() ?? 0.0,
+      dispatch: _parseDouble(json['dispatch']),
+      recordsCount: _parseInt(json['recordsCount']),
+      unit: json['unit'] as String? ?? 'MT',
     );
   }
 
   Map<String, dynamic> toJson() => {
         'mine': mine,
         'dispatch': dispatch,
+        'recordsCount': recordsCount,
+        'unit': unit,
       };
 }
 
@@ -260,7 +415,7 @@ class SubsidiaryDispatchModel {
   factory SubsidiaryDispatchModel.fromJson(Map<String, dynamic> json) {
     return SubsidiaryDispatchModel(
       subsidiary: json['subsidiary'] as String? ?? 'Unknown Subsidiary',
-      dispatch: (json['dispatch'] as num?)?.toDouble() ?? 0.0,
+      dispatch: _parseDouble(json['dispatch']),
     );
   }
 
@@ -282,7 +437,7 @@ class PeriodDispatchModel {
   factory PeriodDispatchModel.fromJson(Map<String, dynamic> json) {
     return PeriodDispatchModel(
       period: json['period'] as String? ?? '',
-      dispatch: (json['dispatch'] as num?)?.toDouble() ?? 0.0,
+      dispatch: _parseDouble(json['dispatch']),
     );
   }
 
@@ -306,16 +461,19 @@ class DispatchAnalyticsModel {
   factory DispatchAnalyticsModel.fromJson(Map<String, dynamic> json) {
     return DispatchAnalyticsModel(
       byMine: (json['byMine'] as List<dynamic>?)
-              ?.map((e) => MineDispatchModel.fromJson(e as Map<String, dynamic>))
+              ?.whereType<Map>()
+              .map((e) => MineDispatchModel.fromJson(Map<String, dynamic>.from(e)))
               .toList() ??
           const [],
       bySubsidiary: (json['bySubsidiary'] as List<dynamic>?)
-              ?.map((e) =>
-                  SubsidiaryDispatchModel.fromJson(e as Map<String, dynamic>))
+              ?.whereType<Map>()
+              .map((e) =>
+                  SubsidiaryDispatchModel.fromJson(Map<String, dynamic>.from(e)))
               .toList() ??
           const [],
       byPeriod: (json['byPeriod'] as List<dynamic>?)
-              ?.map((e) => PeriodDispatchModel.fromJson(e as Map<String, dynamic>))
+              ?.whereType<Map>()
+              .map((e) => PeriodDispatchModel.fromJson(Map<String, dynamic>.from(e)))
               .toList() ??
           const [],
     );
@@ -332,18 +490,47 @@ class TrendItemModel {
   final String period;
   final double production;
   final double dispatch;
+  final String? parameter;
+  final String? mineName;
+  final String? subsidiary;
+  final String? unit;
 
   const TrendItemModel({
     required this.period,
     required this.production,
     required this.dispatch,
+    this.parameter,
+    this.mineName,
+    this.subsidiary,
+    this.unit,
   });
 
   factory TrendItemModel.fromJson(Map<String, dynamic> json) {
+    final periodStr = (json['period'] ?? json['date'] ?? json['label'] ?? json['month'])
+            ?.toString() ??
+        '';
+    final param = json['parameter']?.toString();
+    final val = _parseDouble(json['value']);
+    double prod = _parseDouble(json['production'] ?? json['prod']);
+    double disp = _parseDouble(json['dispatch'] ?? json['disp'] ?? json['target']);
+
+    // If individual extraction record from /analytics/trends
+    if (prod == 0.0 && disp == 0.0 && val > 0) {
+      if (param != null && param.toLowerCase().contains('dispatch')) {
+        disp = val;
+      } else {
+        prod = val;
+      }
+    }
+
     return TrendItemModel(
-      period: json['period'] as String? ?? '',
-      production: (json['production'] as num?)?.toDouble() ?? 0.0,
-      dispatch: (json['dispatch'] as num?)?.toDouble() ?? 0.0,
+      period: periodStr,
+      production: prod,
+      dispatch: disp,
+      parameter: param,
+      mineName: json['mineName']?.toString() ?? json['mine']?.toString(),
+      subsidiary: json['subsidiary']?.toString(),
+      unit: json['unit']?.toString() ?? 'MT',
     );
   }
 
@@ -351,46 +538,95 @@ class TrendItemModel {
         'period': period,
         'production': production,
         'dispatch': dispatch,
+        if (parameter != null) 'parameter': parameter,
+        if (mineName != null) 'mineName': mineName,
+        if (subsidiary != null) 'subsidiary': subsidiary,
+        if (unit != null) 'unit': unit,
       };
 }
 
 class VarianceItemModel {
   final String mine;
   final String parameter;
+  final String period;
   final double target;
   final double actual;
   final double variance;
   final double variancePct;
+  final String status;
+  final String unit;
+  final double dispatch;
 
   const VarianceItemModel({
     required this.mine,
     required this.parameter,
+    this.period = '',
     required this.target,
     required this.actual,
     required this.variance,
     required this.variancePct,
+    this.status = '',
+    this.unit = 'MT',
+    this.dispatch = 0.0,
   });
 
   bool get isPositive => variance >= 0;
 
   factory VarianceItemModel.fromJson(Map<String, dynamic> json) {
+    final act = _parseDouble(
+      json['actualProduction'] ?? json['actual'] ?? json['value'],
+    );
+    final tgt = _parseDouble(
+      json['targetProduction'] ?? json['target'],
+    );
+    final v = json['variance'] != null
+        ? _parseDouble(json['variance'])
+        : (act - tgt);
+
+    final vPct = json['achievementRate'] != null
+        ? _parseDouble(json['achievementRate'])
+        : (json['variancePct'] != null
+            ? _parseDouble(json['variancePct'])
+            : (json['percentage'] != null
+                ? _parseDouble(json['percentage'])
+                : (tgt > 0 ? (v / tgt) * 100 : 0.0)));
+
+    final periodStr = json['period']?.toString() ?? '';
+    final unitStr = json['unit']?.toString() ?? 'MT';
+    final statusStr = json['status']?.toString() ??
+        (v >= 0 ? 'TARGET_EXCEEDED' : 'SHORTFALL');
+
+    final mineStr = (json['mine'] ?? json['name'] ?? json['site'])?.toString() ??
+        (periodStr.isNotEmpty ? periodStr : 'Production Area');
+
+    final paramStr = (json['parameter'] ?? json['metric'] ?? json['item'])?.toString() ??
+        'Raw Coal Extraction ($unitStr)';
+
     return VarianceItemModel(
-      mine: json['mine'] as String? ?? 'Unknown Mine',
-      parameter: json['parameter'] as String? ?? 'Production',
-      target: (json['target'] as num?)?.toDouble() ?? 0.0,
-      actual: (json['actual'] as num?)?.toDouble() ?? 0.0,
-      variance: (json['variance'] as num?)?.toDouble() ?? 0.0,
-      variancePct: (json['variancePct'] as num?)?.toDouble() ?? 0.0,
+      mine: mineStr,
+      parameter: paramStr,
+      period: periodStr,
+      target: tgt,
+      actual: act,
+      variance: v,
+      variancePct: vPct,
+      status: statusStr,
+      unit: unitStr,
+      dispatch: _parseDouble(json['dispatch']),
     );
   }
 
   Map<String, dynamic> toJson() => {
         'mine': mine,
         'parameter': parameter,
+        'period': period,
         'target': target,
         'actual': actual,
         'variance': variance,
         'variancePct': variancePct,
+        'status': status,
+        'unit': unit,
+        'dispatch': dispatch,
       };
 }
 
@@ -399,12 +635,26 @@ class AnomalyItemModel {
   final String mine;
   final String details;
   final String severity; // 'critical' | 'warning' | 'info'
+  final String? parameter;
+  final String? period;
+  final double? value;
+  final String? unit;
+  final double? zScore;
+  final double? percentageChange;
+  final String? documentName;
 
   const AnomalyItemModel({
     required this.type,
     required this.mine,
     required this.details,
     required this.severity,
+    this.parameter,
+    this.period,
+    this.value,
+    this.unit,
+    this.zScore,
+    this.percentageChange,
+    this.documentName,
   });
 
   bool get isCritical => severity.toLowerCase() == 'critical';
@@ -412,11 +662,41 @@ class AnomalyItemModel {
   bool get isInfo => severity.toLowerCase() == 'info';
 
   factory AnomalyItemModel.fromJson(Map<String, dynamic> json) {
+    final typeStr = json['type'] as String? ?? 'ANOMALY';
+    final z = (json['zScore'] as num?)?.toDouble();
+    final pctChange = (json['percentageChange'] as num?)?.toDouble();
+
+    String sev = json['severity'] as String? ?? '';
+    if (sev.isEmpty) {
+      if ((z != null && z.abs() >= 3.0) ||
+          (pctChange != null && pctChange.abs() >= 50.0) ||
+          typeStr.contains('OUTLIER')) {
+        sev = 'critical';
+      } else {
+        sev = 'warning';
+      }
+    }
+
+    final reasonStr = (json['reason'] ?? json['details'] ?? 'Statistical deviation flagged')
+        .toString();
+    final mineStr = (json['mine'] ??
+            json['documentName'] ??
+            json['period'] ??
+            'Active Mining Operations')
+        .toString();
+
     return AnomalyItemModel(
-      type: json['type'] as String? ?? 'ANOMALY',
-      mine: json['mine'] as String? ?? 'Unknown Mine',
-      details: json['details'] as String? ?? '',
-      severity: json['severity'] as String? ?? 'warning',
+      type: typeStr,
+      mine: mineStr,
+      details: reasonStr,
+      severity: sev,
+      parameter: json['parameter']?.toString(),
+      period: json['period']?.toString(),
+      value: (json['value'] as num?)?.toDouble(),
+      unit: json['unit']?.toString(),
+      zScore: z,
+      percentageChange: pctChange,
+      documentName: json['documentName']?.toString(),
     );
   }
 
@@ -425,5 +705,12 @@ class AnomalyItemModel {
         'mine': mine,
         'details': details,
         'severity': severity,
+        if (parameter != null) 'parameter': parameter,
+        if (period != null) 'period': period,
+        if (value != null) 'value': value,
+        if (unit != null) 'unit': unit,
+        if (zScore != null) 'zScore': zScore,
+        if (percentageChange != null) 'percentageChange': percentageChange,
+        if (documentName != null) 'documentName': documentName,
       };
 }

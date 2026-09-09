@@ -120,7 +120,7 @@ class DocumentRemoteDataSourceImpl implements DocumentRemoteDataSource {
 
   @override
   Future<DocumentModel> retryDocument(String id) async {
-    final response = await _dio.post(ApiEndpoints.documentRetry(id));
+    final response = await _dio.post(ApiEndpoints.documentReprocess(id));
     final data = response.data['data'] as Map<String, dynamic>;
     return DocumentModel.fromJson(data);
   }

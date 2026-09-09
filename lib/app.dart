@@ -52,36 +52,70 @@ class AppGateway extends ConsumerStatefulWidget {
 
 class _AppGatewayState extends ConsumerState<AppGateway> {
   bool _showRegister = false;
+  bool _hasCheckedInitialSession = false;
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
 
+    // Mark initial startup check as complete once state is resolved
+    if (authState.status == AuthStatus.unauthenticated ||
+        authState.status == AuthStatus.authenticated ||
+        authState.status == AuthStatus.error) {
+      _hasCheckedInitialSession = true;
+    }
+
+    // Show SplashScreen ONLY on app launch during initial session restoration
+    if (!_hasCheckedInitialSession &&
+        (authState.status == AuthStatus.initial ||
+            (authState.status == AuthStatus.authenticating && authState.user == null))) {
+      return SplashScreen(
+        onSessionChecked: () {
+          if (mounted) {
+            setState(() => _hasCheckedInitialSession = true);
+          }
+        },
+      );
+    }
+
     switch (authState.status) {
+      case AuthStatus.authenticated:
+        return const MainShell();
       case AuthStatus.initial:
-        return const SplashScreen();
+        return SplashScreen(
+          onSessionChecked: () {
+            if (mounted) {
+              setState(() => _hasCheckedInitialSession = true);
+            }
+          },
+        );
       case AuthStatus.authenticating:
+        // Background session / profile refresh when user is already signed in
         if (authState.user != null) {
           return const MainShell();
         }
-        return const SplashScreen();
-      case AuthStatus.authenticated:
-        return const MainShell();
+        // Active login/register submission: KEEP the form mounted so the button loader spins and the screen does not flash!
+        if (_showRegister) {
+          return RegisterScreen(
+            onNavigateToLogin: () => setState(() => _showRegister = false),
+            onRegisterSuccess: () {},
+          );
+        }
+        return LoginScreen(
+          onNavigateToRegister: () => setState(() => _showRegister = true),
+          onLoginSuccess: () {},
+        );
       case AuthStatus.unauthenticated:
       case AuthStatus.error:
         if (_showRegister) {
           return RegisterScreen(
             onNavigateToLogin: () => setState(() => _showRegister = false),
-            onRegisterSuccess: () {
-              // Automatically transitioned by Riverpod state
-            },
+            onRegisterSuccess: () {},
           );
         }
         return LoginScreen(
           onNavigateToRegister: () => setState(() => _showRegister = true),
-          onLoginSuccess: () {
-            // Automatically transitioned by Riverpod state
-          },
+          onLoginSuccess: () {},
         );
     }
   }

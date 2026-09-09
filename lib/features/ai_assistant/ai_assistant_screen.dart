@@ -73,7 +73,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     final isDesktop = MediaQuery.of(context).size.width >= 900;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       body: Row(
         children: [
           // Collapsible Conversation History Sidebar (Desktop)
@@ -180,22 +180,273 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     );
   }
 
+  void _openHistorySheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bottomSheetContext) {
+        return Consumer(
+          builder: (ctx, sheetRef, _) {
+            final state = sheetRef.watch(aiAssistantNotifierProvider);
+
+            return Container(
+              height: MediaQuery.sizeOf(context).height * 0.75,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, -3),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Handle indicator
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  // Sheet Top Bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.history, size: 20, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Conversation History',
+                            style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${state.history.length}',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          icon: const Icon(Icons.refresh, size: 20),
+                          tooltip: 'Refresh',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => sheetRef.read(aiAssistantNotifierProvider.notifier).loadHistory(),
+                        ),
+                        const SizedBox(width: 12),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          tooltip: 'Close',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: () => Navigator.of(bottomSheetContext).pop(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Action button: New Session
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Start New Session'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.of(bottomSheetContext).pop();
+                          sheetRef.read(aiAssistantNotifierProvider.notifier).startNewConversation();
+                        },
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 16),
+                  // Thread list
+                  Expanded(
+                    child: state.isHistoryLoading
+                        ? const Center(child: AppLoadingIndicator(message: 'Loading conversations...'))
+                        : state.history.isEmpty
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.chat_bubble_outline, size: 44, color: AppColors.textMuted),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'No Past Conversations',
+                                        style: AppTypography.titleSmall.copyWith(fontWeight: FontWeight.bold),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Start asking mining questions to begin a new intelligence session.',
+                                        style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : ListView.separated(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                itemCount: state.history.length,
+                                separatorBuilder: (_, _) => const SizedBox(height: 6),
+                                itemBuilder: (itemCtx, index) {
+                                  final item = state.history[index];
+                                  final isSelected = item.id == state.activeConversationId;
+
+                                  return Material(
+                                    color: isSelected
+                                        ? AppColors.primary.withValues(alpha: 0.1)
+                                        : AppColors.background,
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(10),
+                                      onTap: () {
+                                        Navigator.of(bottomSheetContext).pop();
+                                        sheetRef.read(aiAssistantNotifierProvider.notifier).selectConversation(item.id);
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: isSelected
+                                                ? AppColors.primary.withValues(alpha: 0.5)
+                                                : AppColors.border,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 16,
+                                              backgroundColor: isSelected
+                                                  ? AppColors.primary
+                                                  : AppColors.surface,
+                                              child: Icon(
+                                                Icons.chat_bubble_outline,
+                                                size: 16,
+                                                color: isSelected ? Colors.white : AppColors.textSecondary,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    item.title,
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: AppTypography.bodySmall.copyWith(
+                                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                                      color: isSelected ? AppColors.primary : AppColors.textPrimary,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    '${item.messageCount} messages${item.updatedAt != null ? " • ${_formatRelativeTime(item.updatedAt)}" : ""}',
+                                                    style: AppTypography.labelSmall.copyWith(
+                                                      color: AppColors.textSecondary,
+                                                      fontSize: 10,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(Icons.delete_outline, size: 18),
+                                              color: AppColors.textSecondary,
+                                              tooltip: 'Delete session',
+                                              onPressed: () async {
+                                                final confirmed = await showDialog<bool>(
+                                                  context: bottomSheetContext,
+                                                  builder: (dialogCtx) => AlertDialog(
+                                                    title: const Text('Delete Session'),
+                                                    content: const Text(
+                                                        'Are you sure you want to delete this conversation session?'),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () => Navigator.of(dialogCtx).pop(false),
+                                                        child: const Text('Cancel'),
+                                                      ),
+                                                      TextButton(
+                                                        onPressed: () => Navigator.of(dialogCtx).pop(true),
+                                                        style: TextButton.styleFrom(foregroundColor: AppColors.error),
+                                                        child: const Text('Delete'),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                                if (confirmed == true) {
+                                                  sheetRef
+                                                      .read(aiAssistantNotifierProvider.notifier)
+                                                      .deleteConversation(item.id);
+                                                }
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildChatHeader(BuildContext context, AiAssistantState state, bool isDesktop) {
     final isCompact = MediaQuery.of(context).size.width < 480;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         children: [
           if (!isDesktop)
             IconButton(
+              key: const Key('ai_assistant_history_button'),
               icon: const Icon(Icons.menu, size: 20),
-              tooltip: 'Conversations',
-              onPressed: () => Scaffold.of(context).openDrawer(),
+              tooltip: 'Conversation History',
+              onPressed: () => _openHistorySheet(context),
             )
           else
             IconButton(
@@ -341,7 +592,7 @@ class _AiAssistantScreenState extends ConsumerState<AiAssistantScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
       child: SafeArea(
@@ -440,18 +691,21 @@ class _ChatMessageBubble extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 24, right: 40),
+        margin: EdgeInsets.only(
+          bottom: 24,
+          right: MediaQuery.sizeOf(context).width < 400 ? 16 : 36,
+        ),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Assistant Pill + Confidence Rating
+            // Header: Assistant Pill + Confidence Rating (Overflow Protected)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: AppColors.background.withValues(alpha: 0.5),
                 borderRadius: const BorderRadius.only(
@@ -464,11 +718,15 @@ class _ChatMessageBubble extends StatelessWidget {
                 children: [
                   const Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
                   const SizedBox(width: 8),
-                  Text(
-                    'MineIntel AI Response',
-                    style: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.w600),
+                  Expanded(
+                    child: Text(
+                      'MineIntel AI Response',
+                      style: AppTypography.labelMedium.copyWith(fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   // Confidence Pill
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -534,20 +792,21 @@ class _ChatMessageBubble extends StatelessWidget {
                 ),
               ),
 
-            // AI Answer Main Text
+            // AI Answer Formatted Text (Parses ** into bold text, removing raw asterisks)
             Padding(
               padding: const EdgeInsets.all(16),
-              child: SelectableText(
+              child: _buildMarkdownContent(
+                context,
                 message.content,
-                style: AppTypography.bodyMedium.copyWith(height: 1.5),
+                AppTypography.bodyMedium.copyWith(height: 1.5),
               ),
             ),
 
-            // Structured Calculation / Variance Callout
+            // Structured Calculation / Variance Callout (Overflow Protected)
             if (message.calculation != null)
               _buildCalculationCard(message.calculation!),
 
-            // Verifiable Citations Badges
+            // Verifiable Citations Badges (Overflow Protected)
             if (message.citations.isNotEmpty)
               _buildCitationsSection(message.citations),
 
@@ -558,6 +817,190 @@ class _ChatMessageBubble extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Parses markdown headings, bullets, and **bold** spans, filtering out raw asterisks.
+  Widget _buildMarkdownContent(BuildContext context, String rawContent, TextStyle baseStyle) {
+    if (rawContent.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final lines = rawContent.split('\n');
+    final List<Widget> widgets = [];
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final trimmed = line.trim();
+
+      if (trimmed.isEmpty) {
+        if (widgets.isNotEmpty && i < lines.length - 1) {
+          widgets.add(const SizedBox(height: 6));
+        }
+        continue;
+      }
+
+      // Markdown Headings: ###, ##, #
+      if (trimmed.startsWith('### ')) {
+        final text = trimmed.substring(4);
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 6, bottom: 2),
+            child: SelectableText.rich(
+              TextSpan(
+                children: _parseInlineSpans(
+                  context,
+                  text,
+                  baseStyle.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: (baseStyle.fontSize ?? 14) + 1,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        continue;
+      } else if (trimmed.startsWith('## ') || trimmed.startsWith('# ')) {
+        final text = trimmed.replaceFirst(RegExp(r'^#+\s*'), '');
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: SelectableText.rich(
+              TextSpan(
+                children: _parseInlineSpans(
+                  context,
+                  text,
+                  baseStyle.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: (baseStyle.fontSize ?? 14) + 2,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        continue;
+      }
+
+      // Bullet lists: *, -, •
+      final isBullet = trimmed.startsWith('* ') ||
+          trimmed.startsWith('- ') ||
+          trimmed.startsWith('• ');
+
+      if (isBullet) {
+        final bulletContent = trimmed.substring(2).trim();
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(left: 6, bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '• ',
+                  style: baseStyle.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+                Expanded(
+                  child: SelectableText.rich(
+                    TextSpan(
+                      children: _parseInlineSpans(context, bulletContent, baseStyle),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        continue;
+      }
+
+      // Standard paragraph line
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: SelectableText.rich(
+            TextSpan(
+              children: _parseInlineSpans(context, trimmed, baseStyle),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: widgets,
+    );
+  }
+
+  /// Parses **bold**, ***bold-italic***, *italic*, and `code` into styled spans,
+  /// stripping and filtering out all raw `**` asterisks.
+  List<InlineSpan> _parseInlineSpans(BuildContext context, String text, TextStyle baseStyle) {
+    final List<InlineSpan> spans = [];
+    final inlineRegex = RegExp(r'(\*\*\*(.*?)\*\*\*|\*\*(.*?)\*\*|\*([^*]+)\*|`([^`]+)`)');
+
+    int lastIndex = 0;
+    for (final match in inlineRegex.allMatches(text)) {
+      if (match.start > lastIndex) {
+        final plain = text.substring(lastIndex, match.start).replaceAll('**', '');
+        if (plain.isNotEmpty) {
+          spans.add(TextSpan(text: plain, style: baseStyle));
+        }
+      }
+
+      if (match.group(2) != null) {
+        // ***bold-italic***
+        spans.add(TextSpan(
+          text: match.group(2)!.replaceAll('**', ''),
+          style: baseStyle.copyWith(
+            fontWeight: FontWeight.bold,
+            fontStyle: FontStyle.italic,
+          ),
+        ));
+      } else if (match.group(3) != null) {
+        // **bold**
+        spans.add(TextSpan(
+          text: match.group(3)!.replaceAll('**', ''),
+          style: baseStyle.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ));
+      } else if (match.group(4) != null) {
+        // *italic*
+        spans.add(TextSpan(
+          text: match.group(4)!,
+          style: baseStyle.copyWith(
+            fontStyle: FontStyle.italic,
+          ),
+        ));
+      } else if (match.group(5) != null) {
+        // `code`
+        spans.add(TextSpan(
+          text: match.group(5)!,
+          style: baseStyle.copyWith(
+            fontFamily: 'monospace',
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          ),
+        ));
+      }
+
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < text.length) {
+      final remaining = text.substring(lastIndex).replaceAll('**', '');
+      if (remaining.isNotEmpty) {
+        spans.add(TextSpan(text: remaining, style: baseStyle));
+      }
+    }
+
+    if (spans.isEmpty) {
+      spans.add(TextSpan(text: text.replaceAll('**', ''), style: baseStyle));
+    }
+
+    return spans;
   }
 
   Widget _buildCalculationCard(AiCalculationModel calc) {
@@ -576,36 +1019,51 @@ class _ChatMessageBubble extends StatelessWidget {
             children: [
               const Icon(Icons.calculate_outlined, size: 16, color: AppColors.primary),
               const SizedBox(width: 6),
-              Text(
-                'Mathematical Verification & Operational Variance',
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  'Mathematical Verification & Operational Variance',
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
             children: [
-              if (calc.variance != null) ...[
-                Text('Variance: ', style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary)),
-                Text(
-                  calc.variance!,
-                  style: AppTypography.labelSmall.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: calc.variance!.startsWith('-') ? AppColors.error : AppColors.success,
+              if (calc.variance != null)
+                Text.rich(
+                  TextSpan(
+                    text: 'Variance: ',
+                    style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary),
+                    children: [
+                      TextSpan(
+                        text: calc.variance!,
+                        style: AppTypography.labelSmall.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: calc.variance!.startsWith('-') ? AppColors.error : AppColors.success,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 16),
-              ],
-              if (calc.target != null) ...[
-                Text('Target Baseline: ', style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary)),
-                Text(
-                  calc.target!,
-                  style: AppTypography.labelSmall.copyWith(fontWeight: FontWeight.bold),
+              if (calc.target != null)
+                Text.rich(
+                  TextSpan(
+                    text: 'Target Baseline: ',
+                    style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary),
+                    children: [
+                      TextSpan(
+                        text: calc.target!,
+                        style: AppTypography.labelSmall.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
             ],
           ),
           if (calc.formula != null) ...[
@@ -659,9 +1117,12 @@ class _ChatMessageBubble extends StatelessWidget {
                   children: [
                     const Icon(Icons.picture_as_pdf, size: 12, color: AppColors.primary),
                     const SizedBox(width: 4),
-                    Text(
-                      c.documentName,
-                      style: AppTypography.labelSmall.copyWith(fontWeight: FontWeight.w600),
+                    Flexible(
+                      child: Text(
+                        c.documentName,
+                        style: AppTypography.labelSmall.copyWith(fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 6),
                     Container(
@@ -701,11 +1162,15 @@ class _ChatMessageBubble extends StatelessWidget {
           children: [
             const Icon(Icons.menu_book, size: 14, color: AppColors.textSecondary),
             const SizedBox(width: 6),
-            Text(
-              'Supporting Evidence Quotes (${evidence.length})',
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.textSecondary,
-                fontWeight: FontWeight.bold,
+            Expanded(
+              child: Text(
+                'Supporting Evidence Quotes (${evidence.length})',
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -770,7 +1235,7 @@ class _HistorySidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         border: Border(right: BorderSide(color: AppColors.border)),
       ),
       child: Column(
@@ -798,7 +1263,7 @@ class _HistorySidebar extends StatelessWidget {
           // Thread List
           Expanded(
             child: Material(
-              color: AppColors.surface,
+              color: Theme.of(context).colorScheme.surface,
               child: isLoading
                   ? const Center(child: AppLoadingIndicator(message: 'Loading sessions...'))
                   : history.isEmpty
@@ -833,7 +1298,7 @@ class _HistorySidebar extends StatelessWidget {
                               ),
                             ),
                             subtitle: Text(
-                              '${item.messageCount} messages',
+                              '${item.messageCount} messages${item.updatedAt != null ? " • ${_formatRelativeTime(item.updatedAt)}" : ""}',
                               style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary, fontSize: 10),
                             ),
                             trailing: IconButton(
@@ -853,3 +1318,18 @@ class _HistorySidebar extends StatelessWidget {
     );
   }
 }
+
+String _formatRelativeTime(String? iso) {
+  if (iso == null || iso.isEmpty) return '';
+  final dt = DateTime.tryParse(iso);
+  if (dt == null) return '';
+  final local = dt.toLocal();
+  final now = DateTime.now();
+  final diff = now.difference(local);
+  if (diff.inMinutes < 1) return 'Just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  return '${local.month}/${local.day}/${local.year}';
+}
+

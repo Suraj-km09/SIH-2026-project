@@ -6,22 +6,29 @@ import '../../../theme/app_typography.dart';
 /// Modal dialog for submitting a formal document validation review decision.
 class ReviewDecisionDialog extends StatefulWidget {
   final String documentId;
+  final String? documentName;
   final Future<bool> Function(ValidationReviewRequest request) onSubmit;
 
   const ReviewDecisionDialog({
     super.key,
     required this.documentId,
+    this.documentName,
     required this.onSubmit,
   });
 
   static Future<bool?> show(
     BuildContext context, {
     required String documentId,
+    String? documentName,
     required Future<bool> Function(ValidationReviewRequest request) onSubmit,
   }) {
     return showDialog<bool>(
       context: context,
-      builder: (context) => ReviewDecisionDialog(documentId: documentId, onSubmit: onSubmit),
+      builder: (context) => ReviewDecisionDialog(
+        documentId: documentId,
+        documentName: documentName,
+        onSubmit: onSubmit,
+      ),
     );
   }
 
@@ -105,7 +112,7 @@ class _ReviewDecisionDialogState extends State<ReviewDecisionDialog> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Document: ${widget.documentId}',
+                            'Document: ${widget.documentName ?? widget.documentId}',
                             style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
                             overflow: TextOverflow.ellipsis,
                           ),

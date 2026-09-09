@@ -145,6 +145,95 @@ void main() {
       expect(find.text('Password is required'), findsOneWidget);
     });
 
+    testWidgets('LoginScreen validates password shorter than 6 characters',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(wrapWithScope(const LoginScreen()));
+      await tester.pump();
+
+      final textFields = find.byType(TextFormField);
+      await tester.enterText(textFields.at(0), 'admin');
+      await tester.enterText(textFields.at(1), '123'); // < 6 chars
+      await tester.pump();
+
+      await tester.ensureVisible(find.text('Sign In to Workspace'));
+      await tester.tap(find.text('Sign In to Workspace'));
+      await tester.pump();
+
+      expect(find.text('Password must be at least 6 characters'), findsOneWidget);
+    });
+
+    testWidgets('LoginScreen displays user-friendly error message on incorrect credentials without technical headers',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(wrapWithScope(const LoginScreen()));
+      await tester.pump();
+
+      final textFields = find.byType(TextFormField);
+      await tester.enterText(textFields.at(0), 'admin');
+      await tester.enterText(textFields.at(1), 'wrongpassword123');
+      await tester.pump();
+
+      await tester.ensureVisible(find.text('Sign In to Workspace'));
+      await tester.tap(find.text('Sign In to Workspace'));
+      await tester.pump(); // Start request
+
+      // Verify button switches to loading state with spinner
+      expect(find.text('Signing In...'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 300)); // Complete mock delayed login
+      await tester.pumpAndSettle();
+
+      // Verify loader stops and button resets
+      expect(find.text('Sign In to Workspace'), findsOneWidget);
+
+      // Verify user-friendly error message is displayed and technical error types are NOT shown
+      expect(find.text('Authentication Failed'), findsNothing);
+      expect(find.text('Validation Error'), findsNothing);
+      expect(find.text('DioException'), findsNothing);
+      expect(find.textContaining('Invalid username or password'), findsWidgets);
+    });
+
+    testWidgets('LoginScreen ignores repeated button taps while authentication is in progress',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(wrapWithScope(const LoginScreen()));
+      await tester.pump();
+
+      final textFields = find.byType(TextFormField);
+      await tester.enterText(textFields.at(0), 'admin');
+      await tester.enterText(textFields.at(1), 'admin123');
+      await tester.pump();
+
+      // Tap once
+      await tester.tap(find.text('Sign In to Workspace'));
+      await tester.pump();
+
+      // Verify loading state
+      expect(find.text('Signing In...'), findsOneWidget);
+
+      // Attempt rapid second and third taps while loading
+      await tester.tap(find.text('Signing In...'), warnIfMissed: false);
+      await tester.tap(find.text('Signing In...'), warnIfMissed: false);
+      await tester.pump();
+
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+
+      // Verify successful sign-in
+      expect(find.textContaining('Signed in successfully'), findsOneWidget);
+    });
+
     testWidgets('RegisterScreen renders all documented fields and validates password mismatch',
         (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1200, 1200);
@@ -175,6 +264,43 @@ void main() {
       await tester.pump();
 
       expect(find.text('Passwords do not match'), findsOneWidget);
+    });
+
+    testWidgets('RegisterScreen shows loader and ignores repeated button taps during registration',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(wrapWithScope(const RegisterScreen()));
+      await tester.pump();
+
+      final textFields = find.byType(TextFormField);
+      await tester.enterText(textFields.at(0), 'geologist_alex');
+      await tester.enterText(textFields.at(1), 'alex@mineintel.ai');
+      await tester.enterText(textFields.at(2), 'password123');
+      await tester.enterText(textFields.at(3), 'password123');
+      await tester.pump();
+
+      await tester.ensureVisible(find.text('Create Account'));
+      await tester.tap(find.text('Create Account'));
+      await tester.pump(); // Start submission
+
+      // Verify button switches to loading state
+      expect(find.text('Creating Account...'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      // Attempt repeated tap while loading
+      await tester.tap(find.text('Creating Account...'), warnIfMissed: false);
+      await tester.pump();
+
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+
+      // Verify success and that technical error headers are NOT shown
+      expect(find.textContaining('Account created successfully'), findsOneWidget);
+      expect(find.text('Registration Error'), findsNothing);
+      expect(find.text('Validation Error'), findsNothing);
     });
 
     testWidgets('ProfileScreen renders user details, role badge, and update forms',

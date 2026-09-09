@@ -13,11 +13,11 @@ class AuditUser {
   });
 
   factory AuditUser.fromJson(dynamic json) {
-    if (json is Map<String, dynamic>) {
+    if (json is Map) {
       return AuditUser(
-        id: json['_id'] as String? ?? json['id'] as String? ?? '',
-        username: json['username'] as String? ?? 'system',
-        role: json['role'] as String?,
+        id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+        username: json['username']?.toString() ?? 'system',
+        role: json['role']?.toString(),
       );
     } else if (json is String) {
       return AuditUser(id: json, username: json);
@@ -68,8 +68,8 @@ class AuditLogEntry {
       resourceId: json['resourceId'] as String?,
       status: json['status'] as String? ?? 'SUCCESS',
       ipAddress: json['ipAddress'] as String?,
-      details: json['details'] is Map<String, dynamic>
-          ? json['details'] as Map<String, dynamic>
+      details: json['details'] is Map
+          ? Map<String, dynamic>.from(json['details'] as Map)
           : {},
       timestamp: json['timestamp'] as String? ??
           json['createdAt'] as String? ??
@@ -106,10 +106,10 @@ class AuditStats {
 
   factory AuditStats.fromJson(Map<String, dynamic> json) {
     return AuditStats(
-      totalEvents: json['totalEvents'] as int? ?? 0,
-      successful: json['successful'] as int? ?? 0,
-      failed: json['failed'] as int? ?? 0,
-      activeUsers: json['activeUsers'] as int? ?? 0,
+      totalEvents: (json['totalEvents'] as num?)?.toInt() ?? 0,
+      successful: (json['successful'] as num?)?.toInt() ?? 0,
+      failed: (json['failed'] as num?)?.toInt() ?? 0,
+      activeUsers: (json['activeUsers'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -139,11 +139,11 @@ class AuditMeta {
 
   factory AuditMeta.fromJson(Map<String, dynamic> json) {
     return AuditMeta(
-      total: json['total'] as int? ?? 0,
-      limit: json['limit'] as int? ?? 100,
-      skip: json['skip'] as int? ?? 0,
-      page: json['page'] as int? ?? 1,
-      pages: json['pages'] as int? ?? 1,
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      limit: (json['limit'] as num?)?.toInt() ?? 100,
+      skip: (json['skip'] as num?)?.toInt() ?? 0,
+      page: (json['page'] as num?)?.toInt() ?? 1,
+      pages: (json['pages'] as num?)?.toInt() ?? 1,
     );
   }
 
@@ -169,13 +169,16 @@ class AuditLogsResponse {
   factory AuditLogsResponse.fromJson(Map<String, dynamic> json) {
     final rawList = json['data'] as List? ?? [];
     final items = rawList
-        .whereType<Map<String, dynamic>>()
-        .map(AuditLogEntry.fromJson)
+        .whereType<Map>()
+        .map((e) => AuditLogEntry.fromJson(Map<String, dynamic>.from(e)))
         .toList();
 
     AuditMeta? meta;
-    if (json['meta'] is Map<String, dynamic>) {
-      meta = AuditMeta.fromJson(json['meta'] as Map<String, dynamic>);
+    if (json['meta'] is Map) {
+      meta = AuditMeta.fromJson(Map<String, dynamic>.from(json['meta'] as Map));
+    } else if (json['pagination'] is Map) {
+      meta = AuditMeta.fromJson(
+          Map<String, dynamic>.from(json['pagination'] as Map));
     }
 
     return AuditLogsResponse(

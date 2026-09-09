@@ -11,9 +11,13 @@ class AuthResultModel {
   });
 
   factory AuthResultModel.fromJson(Map<String, dynamic> json) {
+    final userMap = json['user'] is Map<String, dynamic>
+        ? json['user'] as Map<String, dynamic>
+        : json;
     return AuthResultModel(
-      user: UserModel.fromJson(json),
-      token: json['token'] as String? ?? '',
+      user: UserModel.fromJson(userMap),
+      token: json['token'] as String? ??
+          (json['user'] is Map ? json['user']['token'] as String? ?? '' : ''),
     );
   }
 

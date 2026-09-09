@@ -141,7 +141,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     final isDesktop = MediaQuery.of(context).size.width >= 768;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       body: RefreshIndicator(
         onRefresh: () => ref.read(documentListNotifierProvider.notifier).refresh(),
         color: AppColors.primary,
@@ -341,7 +341,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
@@ -388,7 +388,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                       .setSearch(_searchController.text);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.surfaceMuted,
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   foregroundColor: AppColors.textPrimary,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -494,7 +494,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppColors.border),
       ),
@@ -514,7 +514,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
   Widget _buildDesktopTable(List<DocumentModel> documents) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
@@ -569,7 +569,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceMuted,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -624,7 +624,7 @@ class _DocumentListScreenState extends ConsumerState<DocumentListScreen> {
   Widget _buildMobileCard(DocumentModel doc) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      color: AppColors.surface,
+      color: Theme.of(context).colorScheme.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),

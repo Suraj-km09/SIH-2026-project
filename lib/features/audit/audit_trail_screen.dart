@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/utils/file_saver.dart';
 import '../../models/audit_model.dart';
 import '../../state/audit_state.dart';
 import '../../state/auth_state.dart';
@@ -290,12 +291,17 @@ class _AuditTrailScreenState extends ConsumerState<AuditTrailScreen> {
     );
   }
 
+  void _refreshAll() {
+    ref.read(auditNotifierProvider.notifier).loadStats();
+    ref.read(auditNotifierProvider.notifier).loadLogs();
+  }
+
   Widget _buildFilterToolbar(BuildContext context, AuditState state) {
     return AppCard(
       padding: const EdgeInsets.all(12),
       child: LayoutBuilder(
         builder: (ctx, constraints) {
-          final isNarrow = constraints.maxWidth < 600;
+          final isNarrow = constraints.maxWidth < 650;
 
           final searchWidget = AppTextField(
             hint: 'Search by action, user, IP, or resource...',
@@ -323,20 +329,56 @@ class _AuditTrailScreenState extends ConsumerState<AuditTrailScreen> {
             ),
           );
 
+          const knownActions = [
+            'ALL',
+            'ADMIN_LOGIN',
+            'USER_LOGIN',
+            'USER_LOGOUT',
+            'APPROVE_REPORT',
+            'REJECT_REPORT',
+            'UPLOAD_DOCUMENT',
+            'KNOWLEDGE_BASE_INDEX_DOCUMENT',
+          ];
+          final actionItems = [
+            ...knownActions,
+            if (!knownActions.contains(state.selectedAction))
+              state.selectedAction,
+          ];
+
+          final actionDropdown = DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: state.selectedAction,
+              isDense: true,
+              items: actionItems.map((act) {
+                final label = act == 'ALL'
+                    ? 'Action: All'
+                    : act.length > 18
+                        ? '${act.substring(0, 16)}..'
+                        : act;
+                return DropdownMenuItem(value: act, child: Text(label));
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  ref.read(auditNotifierProvider.notifier).setAction(val);
+                }
+              },
+            ),
+          );
+
           if (isNarrow) {
             return Column(
               children: [
                 searchWidget,
                 const SizedBox(height: 8),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     statusDropdown,
+                    const SizedBox(width: 12),
+                    Expanded(child: actionDropdown),
                     IconButton(
                       icon: const Icon(Icons.refresh, size: 20),
                       tooltip: 'Refresh',
-                      onPressed: () =>
-                          ref.read(auditNotifierProvider.notifier).loadLogs(),
+                      onPressed: _refreshAll,
                     ),
                   ],
                 ),
@@ -347,14 +389,15 @@ class _AuditTrailScreenState extends ConsumerState<AuditTrailScreen> {
           return Row(
             children: [
               Expanded(child: searchWidget),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               statusDropdown,
+              const SizedBox(width: 12),
+              actionDropdown,
               const SizedBox(width: 8),
               IconButton(
                 icon: const Icon(Icons.refresh, size: 20),
                 tooltip: 'Refresh',
-                onPressed: () =>
-                    ref.read(auditNotifierProvider.notifier).loadLogs(),
+                onPressed: _refreshAll,
               ),
             ],
           );
@@ -418,10 +461,12 @@ class _AuditTrailScreenState extends ConsumerState<AuditTrailScreen> {
   }
 
   Widget _buildLogList(BuildContext context, List<AuditLogEntry> logs) {
-    return ListView.separated(
-      itemCount: logs.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
+    return RefreshIndicator(
+      onRefresh: () async => _refreshAll(),
+      child: ListView.separated(
+        itemCount: logs.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
         final log = logs[index];
         return AppCard(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -439,7 +484,7 @@ class _AuditTrailScreenState extends ConsumerState<AuditTrailScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceMuted,
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -532,6 +577,7 @@ class _AuditTrailScreenState extends ConsumerState<AuditTrailScreen> {
           ),
         );
       },
+      ),
     );
   }
 
@@ -724,10 +770,17 @@ class _AuditTrailScreenState extends ConsumerState<AuditTrailScreen> {
                 final res = await ref
                     .read(auditNotifierProvider.notifier)
                     .exportAudit('csv');
+                if (res != null) {
+                  await FileSaver.saveAndLaunchText(
+                    res.content,
+                    res.filename,
+                    mimeType: 'text/csv;charset=utf-8',
+                  );
+                }
                 if (context.mounted && res != null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Audit exported as ${res.filename}'),
+                      content: Text('Audit exported and downloaded as ${res.filename}'),
                       backgroundColor: AppColors.success,
                     ),
                   );
@@ -742,10 +795,17 @@ class _AuditTrailScreenState extends ConsumerState<AuditTrailScreen> {
                 final res = await ref
                     .read(auditNotifierProvider.notifier)
                     .exportAudit('json');
+                if (res != null) {
+                  await FileSaver.saveAndLaunchText(
+                    res.content,
+                    res.filename,
+                    mimeType: 'application/json;charset=utf-8',
+                  );
+                }
                 if (context.mounted && res != null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Audit exported as ${res.filename}'),
+                      content: Text('Audit exported and downloaded as ${res.filename}'),
                       backgroundColor: AppColors.success,
                     ),
                   );

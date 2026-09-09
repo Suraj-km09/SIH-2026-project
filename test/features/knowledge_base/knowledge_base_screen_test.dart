@@ -86,5 +86,62 @@ void main() {
       expect(find.textContaining('Similarity'), findsWidgets);
       expect(find.text('ECL_Production_August2026.pdf'), findsWidgets);
     });
+
+    testWidgets('Renders cleanly without overflow on small mobile phone (360x700)', (tester) async {
+      tester.view.physicalSize = const Size(360, 700);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final mockRepo = MockKnowledgeBaseRepository();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            knowledgeBaseRepositoryProvider.overrideWithValue(mockRepo),
+          ],
+          child: const MaterialApp(
+            home: KnowledgeBaseScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Check compact stats cards in mobile view
+      expect(find.text('Total Documents'), findsOneWidget);
+      expect(find.text('Indexed for RAG'), findsOneWidget);
+      expect(find.text('Total Vector Chunks'), findsOneWidget);
+      final initialErr = tester.takeException();
+      expect(initialErr, isNull);
+
+      // Switch to RAG Sandbox tab on mobile (scroll tab into view if needed)
+      await tester.scrollUntilVisible(
+        find.text('Semantic RAG Search Sandbox'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Semantic RAG Search Sandbox'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Search Vectors'), findsOneWidget);
+      expect(find.textContaining('Top Results (K):'), findsOneWidget);
+      final err = tester.takeException();
+      expect(err, isNull);
+
+      // Execute search query
+      await tester.enterText(
+        find.byType(TextField).last,
+        'coal methane ventilation',
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Search Vectors'));
+      await tester.pumpAndSettle();
+
+      // Verify search results and clear button render cleanly on mobile
+      expect(find.textContaining('Similarity'), findsWidgets);
+      expect(find.text('Clear Results'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

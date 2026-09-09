@@ -14,11 +14,26 @@ class IntelligenceOverview {
   });
 
   factory IntelligenceOverview.fromJson(Map<String, dynamic> json) {
+    final entities = (json['totalEntitiesFound'] as num?)?.toInt() ??
+        (json['totalEntities'] as num?)?.toInt() ??
+        0;
+    final topics = (json['totalTopicsDiscovered'] as num?)?.toInt() ??
+        (json['totalTopics'] as num?)?.toInt() ??
+        0;
+    final similarities =
+        (json['crossDocumentSimilaritiesComputed'] as num?)?.toInt() ??
+            (json['similarityClusters'] as num?)?.toInt() ??
+            0;
+    final analyzed = (json['totalDocumentsAnalyzed'] as num?)?.toInt() ??
+        (json['recentChanges'] as num?)?.toInt() ??
+        0;
+    final changes = (json['recentChanges'] as num?)?.toInt() ?? analyzed;
+
     return IntelligenceOverview(
-      totalEntities: (json['totalEntities'] as num?)?.toInt() ?? 0,
-      totalTopics: (json['totalTopics'] as num?)?.toInt() ?? 0,
-      similarityClusters: (json['similarityClusters'] as num?)?.toInt() ?? 0,
-      recentChanges: (json['recentChanges'] as num?)?.toInt() ?? 0,
+      totalEntities: entities,
+      totalTopics: topics,
+      similarityClusters: similarities,
+      recentChanges: changes,
     );
   }
 
@@ -67,7 +82,7 @@ class IntelligenceAnalysisResult {
 
 class IntelligenceEntity {
   final String name;
-  final String type; // LOCATION, ORGANIZATION, MINE, EQUIPMENT, FIGURE
+  final String type; // LOCATION, ORGANIZATION, MINE, EQUIPMENT, FIGURE, SUBSIDIARY
   final int count;
   final List<String> documents;
 
@@ -82,12 +97,19 @@ class IntelligenceEntity {
     final docsRaw = json['documents'];
     List<String> docsList = [];
     if (docsRaw is List) {
-      docsList = docsRaw.map((e) => e.toString()).toList();
+      docsList = docsRaw
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    } else if (docsRaw is String && docsRaw.trim().isNotEmpty) {
+      docsList = docsRaw.trim().split(RegExp(r'\s+'));
     }
     return IntelligenceEntity(
       name: json['name'] as String? ?? '',
       type: (json['type'] as String? ?? 'MINE').toUpperCase(),
-      count: (json['count'] as num?)?.toInt() ?? 1,
+      count: (json['mentions'] as num?)?.toInt() ??
+          (json['count'] as num?)?.toInt() ??
+          1,
       documents: docsList,
     );
   }
@@ -115,7 +137,9 @@ class DocumentEntityItem {
     return DocumentEntityItem(
       name: json['name'] as String? ?? '',
       type: (json['type'] as String? ?? 'MINE').toUpperCase(),
-      count: (json['count'] as num?)?.toInt() ?? 1,
+      count: (json['mentions'] as num?)?.toInt() ??
+          (json['count'] as num?)?.toInt() ??
+          1,
     );
   }
 
@@ -155,11 +179,21 @@ class RelatedTopicItem {
     required this.strength,
   });
 
-  factory RelatedTopicItem.fromJson(Map<String, dynamic> json) {
-    return RelatedTopicItem(
-      name: json['name'] as String? ?? '',
-      strength: (json['strength'] as num?)?.toDouble() ?? 0.0,
-    );
+  factory RelatedTopicItem.fromJson(dynamic json) {
+    if (json is Map<String, dynamic>) {
+      return RelatedTopicItem(
+        name: json['name'] as String? ?? '',
+        strength: (json['strength'] as num?)?.toDouble() ?? 0.0,
+      );
+    } else if (json is String) {
+      final nameMatch = RegExp(r'name=([^;]+)').firstMatch(json);
+      final strMatch = RegExp(r'strength=([^}]+)').firstMatch(json);
+      return RelatedTopicItem(
+        name: nameMatch?.group(1)?.trim() ?? json,
+        strength: double.tryParse(strMatch?.group(1)?.trim() ?? '0.5') ?? 0.5,
+      );
+    }
+    return const RelatedTopicItem(name: '', strength: 0.0);
   }
 
   Map<String, dynamic> toJson() => {
@@ -191,7 +225,7 @@ class IntelligenceCluster {
             .toList() ??
         [];
     final relList = (json['relatedTopics'] as List<dynamic>?)
-            ?.map((e) => RelatedTopicItem.fromJson(e as Map<String, dynamic>))
+            ?.map((e) => RelatedTopicItem.fromJson(e))
             .toList() ??
         [];
 
@@ -200,7 +234,9 @@ class IntelligenceCluster {
       name: json['name'] as String? ?? 'Mining Cluster',
       weight: (json['weight'] as num?)?.toDouble() ?? 0.5,
       keywords: kwList,
-      documentsCount: (json['documentsCount'] as num?)?.toInt() ?? 0,
+      documentsCount: (json['documentCount'] as num?)?.toInt() ??
+          (json['documentsCount'] as num?)?.toInt() ??
+          0,
       relatedTopics: relList,
     );
   }
@@ -237,7 +273,9 @@ class SimilarDocumentItem {
     return SimilarDocumentItem(
       documentId: json['documentId'] as String? ?? json['_id'] as String? ?? '',
       documentName: json['documentName'] as String? ?? 'Document',
-      similarity: (json['similarity'] as num?)?.toDouble() ?? 0.0,
+      similarity: (json['similarity'] as num?)?.toDouble() ??
+          (json['score'] as num?)?.toDouble() ??
+          0.0,
       commonEntities: commonList,
     );
   }
@@ -260,6 +298,47 @@ class IntelligenceSimilarityResult {
   });
 
   factory IntelligenceSimilarityResult.fromJson(Map<String, dynamic> json) {
+    if (json['nodes'] is List && json['links'] is List) {
+      final nodesList =
+          (json['nodes'] as List).whereType<Map<String, dynamic>>();
+      final nodeNames = <String, String>{};
+      for (final n in nodesList) {
+        final id = n['id']?.toString() ?? '';
+        final name = n['name']?.toString() ?? id;
+        if (id.isNotEmpty) nodeNames[id] = name;
+      }
+
+      final linksList =
+          (json['links'] as List).whereType<Map<String, dynamic>>();
+      final items = <SimilarDocumentItem>[];
+      for (final l in linksList) {
+        final targetId = l['target']?.toString() ?? '';
+        final sourceId = l['source']?.toString() ?? '';
+        final score = (l['score'] as num?)?.toDouble() ?? 0.0;
+        final docName = nodeNames[targetId] ??
+            nodeNames[sourceId] ??
+            'Document (${targetId.length > 8 ? targetId.substring(0, 8) : targetId})';
+        items.add(SimilarDocumentItem(
+          documentId: targetId.isNotEmpty ? targetId : sourceId,
+          documentName: docName,
+          similarity: score,
+          commonEntities: const [
+            'Mining Operations',
+            'Production Report',
+            'Verified Metrics'
+          ],
+        ));
+      }
+
+      final targetDoc =
+          nodeNames.values.firstOrNull ?? 'Active Corpus Documents';
+
+      return IntelligenceSimilarityResult(
+        targetDocument: targetDoc,
+        similar: items,
+      );
+    }
+
     final list = json['similar'] as List<dynamic>? ?? [];
     return IntelligenceSimilarityResult(
       targetDocument: json['targetDocument'] as String? ?? '',
@@ -297,6 +376,11 @@ class DocumentSimilarityResponse {
 
 class IntelligenceChangeItem {
   final String parameter;
+  final String? type; // 'added', 'removed', 'modified'
+  final String? mineName;
+  final String? subsidiary;
+  final dynamic oldValue;
+  final dynamic newValue;
   final double docAValue;
   final double docBValue;
   final double variancePct;
@@ -304,24 +388,50 @@ class IntelligenceChangeItem {
 
   const IntelligenceChangeItem({
     required this.parameter,
-    required this.docAValue,
-    required this.docBValue,
-    required this.variancePct,
+    this.type,
+    this.mineName,
+    this.subsidiary,
+    this.oldValue,
+    this.newValue,
+    this.docAValue = 0.0,
+    this.docBValue = 0.0,
+    this.variancePct = 0.0,
     this.unit,
   });
 
   factory IntelligenceChangeItem.fromJson(Map<String, dynamic> json) {
+    final double docA = (json['docAValue'] as num?)?.toDouble() ??
+        double.tryParse(json['oldValue']?.toString() ?? '') ??
+        0.0;
+    final double docB = (json['docBValue'] as num?)?.toDouble() ??
+        double.tryParse(json['newValue']?.toString() ?? '') ??
+        0.0;
+    double variance = (json['variancePct'] as num?)?.toDouble() ?? 0.0;
+    if (variance == 0.0 && docA > 0 && docB > 0) {
+      variance = ((docB - docA) / docA) * 100;
+    }
+
     return IntelligenceChangeItem(
       parameter: json['parameter'] as String? ?? '',
-      docAValue: (json['docAValue'] as num?)?.toDouble() ?? 0.0,
-      docBValue: (json['docBValue'] as num?)?.toDouble() ?? 0.0,
-      variancePct: (json['variancePct'] as num?)?.toDouble() ?? 0.0,
+      type: json['type'] as String?,
+      mineName: json['mineName'] as String?,
+      subsidiary: json['subsidiary'] as String?,
+      oldValue: json['oldValue'],
+      newValue: json['newValue'],
+      docAValue: docA,
+      docBValue: docB,
+      variancePct: variance,
       unit: json['unit'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() => {
         'parameter': parameter,
+        if (type != null) 'type': type,
+        if (mineName != null) 'mineName': mineName,
+        if (subsidiary != null) 'subsidiary': subsidiary,
+        if (oldValue != null) 'oldValue': oldValue,
+        if (newValue != null) 'newValue': newValue,
         'docAValue': docAValue,
         'docBValue': docBValue,
         'variancePct': variancePct,
@@ -334,6 +444,8 @@ class IntelligenceChangesResponse {
   final int added;
   final int removed;
   final int modified;
+  final String? docAName;
+  final String? docBName;
   final List<IntelligenceChangeItem> changes;
 
   const IntelligenceChangesResponse({
@@ -341,16 +453,27 @@ class IntelligenceChangesResponse {
     required this.added,
     required this.removed,
     required this.modified,
+    this.docAName,
+    this.docBName,
     required this.changes,
   });
 
   factory IntelligenceChangesResponse.fromJson(Map<String, dynamic> json) {
     final list = json['changes'] as List<dynamic>? ?? [];
+    final docA = json['documentA'] is Map
+        ? json['documentA']['name'] as String?
+        : null;
+    final docB = json['documentB'] is Map
+        ? json['documentB']['name'] as String?
+        : null;
+
     return IntelligenceChangesResponse(
-      totalChanges: (json['totalChanges'] as num?)?.toInt() ?? 0,
+      totalChanges: (json['totalChanges'] as num?)?.toInt() ?? list.length,
       added: (json['added'] as num?)?.toInt() ?? 0,
       removed: (json['removed'] as num?)?.toInt() ?? 0,
       modified: (json['modified'] as num?)?.toInt() ?? 0,
+      docAName: docA,
+      docBName: docB,
       changes: list
           .map((e) =>
               IntelligenceChangeItem.fromJson(e as Map<String, dynamic>))

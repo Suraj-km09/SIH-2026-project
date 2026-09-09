@@ -175,7 +175,7 @@ class _DocumentUploadDialogState extends ConsumerState<DocumentUploadDialog> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.surfaceMuted,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppColors.borderSubtle),
               ),
@@ -237,7 +237,7 @@ class _DocumentUploadDialogState extends ConsumerState<DocumentUploadDialog> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceMuted,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.accentTeal.withValues(alpha: 0.5)),
                 ),
@@ -399,7 +399,7 @@ class _DocumentUploadDialogState extends ConsumerState<DocumentUploadDialog> {
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: progress > 0 ? progress : null,
-                      backgroundColor: AppColors.surfaceMuted,
+                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                       valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                       minHeight: 6,
                     ),

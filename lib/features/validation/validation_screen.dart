@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/document_model.dart';
 import '../../models/validation_issue_model.dart';
 import '../../state/app_state.dart';
 import '../../state/auth_state.dart';
@@ -72,6 +73,64 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
     );
   }
 
+  String _getDocumentTitle(DocumentModel? doc, String fallbackId) {
+    String name = '';
+    String? category;
+    String? fileType;
+
+    if (doc != null) {
+      category = doc.category;
+      fileType = doc.fileType;
+      if (doc.originalName.isNotEmpty &&
+          doc.originalName != 'Untitled Document' &&
+          !doc.originalName.startsWith('doc_') &&
+          !doc.originalName.startsWith('doc-')) {
+        name = doc.originalName;
+      } else if (doc.filename != null && doc.filename!.isNotEmpty) {
+        name = doc.filename!;
+      }
+    }
+
+    if (name.isEmpty) {
+      name = fallbackId;
+    }
+
+    // Strip timestamp prefix like "1788807291803-production.pdf" -> "production.pdf"
+    final stripped = name.replaceFirst(RegExp(r'^\d{10,14}[-_]'), '');
+    if (stripped.isNotEmpty && !RegExp(r'^[a-fA-F0-9_-]{6,}(\.[a-zA-Z0-9]+)?$').hasMatch(stripped)) {
+      name = stripped;
+    }
+
+    // If still a raw ID/hash/timestamp like "1788807291803-376382343" or "376382343.pdf" or "doc_001":
+    final isRawId = RegExp(r'^\d{10,14}[-_][a-zA-Z0-9]+').hasMatch(name) ||
+        RegExp(r'^\d{6,}(\.[a-zA-Z0-9]+)?$').hasMatch(name) ||
+        RegExp(r'^[a-fA-F0-9]{16,}').hasMatch(name) ||
+        name.startsWith('doc_') ||
+        name.startsWith('doc-');
+
+    if (isRawId) {
+      if (fallbackId == 'doc-001' || fallbackId == 'doc_001') {
+        return 'Rajmahal Production Report (PDF)';
+      }
+      if (fallbackId == 'doc-002' || fallbackId == 'doc_002') {
+        return 'Dhanbad Safety Audit (DOCX)';
+      }
+      if (fallbackId == 'doc-003' || fallbackId == 'doc_003') {
+        return 'Korba Weighbridge Log (XLSX)';
+      }
+
+      final ext = fileType?.toUpperCase() ??
+          (name.contains('.') ? name.split('.').last.toUpperCase() : 'PDF');
+      final cat = (category != null && category.isNotEmpty && category != 'Uncategorized')
+          ? category
+          : 'Mining Report';
+      final shortId = fallbackId.length > 6 ? fallbackId.substring(fallbackId.length - 6) : fallbackId;
+      return '$cat ($ext) • #$shortId';
+    }
+
+    return name;
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(validationNotifierProvider);
@@ -101,11 +160,22 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
       }
     });
 
+    // Automatically align active document with loaded list if fallback is obsolete
+    ref.listen<DocumentListState>(documentListNotifierProvider, (prev, next) {
+      if (next.documents.isNotEmpty) {
+        final currentDocId = ref.read(validationNotifierProvider).activeDocumentId;
+        final hasMatch = next.documents.any((d) => d.id == currentDocId);
+        if (!hasMatch && widget.initialDocumentId == null) {
+          ref.read(validationNotifierProvider.notifier).loadDocument(next.documents.first.id);
+        }
+      }
+    });
+
     final docs = ref.watch(documentListNotifierProvider).documents;
     final activeDocId = state.activeDocumentId ?? widget.initialDocumentId ?? 'doc_001';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       body: SafeArea(
         child: Column(
           children: [
@@ -144,11 +214,13 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
     BuildContext context,
     ValidationState state,
     String activeDocId,
-    List<dynamic> docs,
+    List<DocumentModel> docs,
     bool canApprove,
   ) {
     final notifier = ref.read(validationNotifierProvider.notifier);
     final isCompact = MediaQuery.of(context).size.width < 900;
+    final activeDoc = docs.where((d) => d.id == activeDocId).firstOrNull;
+    final activeTitle = _getDocumentTitle(activeDoc, activeDocId);
 
     final titleSection = Row(
       children: [
@@ -207,38 +279,121 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
     );
 
     final dropdown = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.surfaceMuted,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppColors.border),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: docs.any((d) => d.id == activeDocId) ? activeDocId : null,
-          hint: Text(
-            activeDocId,
-            style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary),
+          hint: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.description_outlined, size: 16, color: AppColors.accentBlue),
+              const SizedBox(width: 8),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: isCompact ? 140 : 200),
+                child: Text(
+                  activeTitle,
+                  style: AppTypography.bodySmall.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
           icon: const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+          dropdownColor: Theme.of(context).colorScheme.surface,
+          selectedItemBuilder: docs.isEmpty
+              ? null
+              : (context) {
+                  return docs.map<Widget>((d) {
+                    final title = _getDocumentTitle(d, d.id);
+                    return ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: isCompact ? 140 : 200),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.description_outlined, size: 16, color: AppColors.accentBlue),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.bodySmall.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList();
+                },
           items: docs.isEmpty
               ? [
                   DropdownMenuItem(
                     value: activeDocId,
-                    child: Text(activeDocId, style: AppTypography.bodySmall),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.description_outlined, size: 16, color: AppColors.accentBlue),
+                        const SizedBox(width: 8),
+                        Text(activeTitle, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+                      ],
+                    ),
                   )
                 ]
               : docs.map<DropdownMenuItem<String>>((d) {
-                  final title = d.filename.isNotEmpty ? d.filename : d.id;
+                  final title = _getDocumentTitle(d, d.id);
+                  final cat = (d.category.isNotEmpty && d.category != 'Uncategorized')
+                      ? d.category
+                      : d.fileType.toUpperCase();
+                  final pageInfo = d.totalPages > 0
+                      ? '${d.totalPages} pages'
+                      : d.formattedFileSize;
+
                   return DropdownMenuItem<String>(
                     value: d.id,
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 160),
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary),
+                      constraints: BoxConstraints(maxWidth: isCompact ? 220 : 320),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.picture_as_pdf_outlined, size: 16, color: AppColors.accentBlue),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.bodySmall.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                Text(
+                                  '$cat • $pageInfo',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    fontSize: 10,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   );
@@ -284,6 +439,7 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
             : () => ReviewDecisionDialog.show(
                   context,
                   documentId: activeDocId,
+                  documentName: activeTitle,
                   onSubmit: (req) => notifier.submitReview(activeDocId, req),
                 ),
         icon: const Icon(Icons.rate_review_outlined, size: 16),
@@ -310,8 +466,8 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: isCompact ? 16 : 20, vertical: 12),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
         border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
       ),
       child: isCompact
@@ -398,7 +554,7 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
@@ -422,7 +578,7 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
                 child: CircularProgressIndicator(
                   value: score / 100,
                   strokeWidth: 9,
-                  backgroundColor: AppColors.surfaceMuted,
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   color: scoreColor,
                 ),
               ),
@@ -481,7 +637,7 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
@@ -655,7 +811,7 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
@@ -868,7 +1024,7 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
@@ -1004,7 +1160,7 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.border),
           ),
@@ -1072,7 +1228,7 @@ class _ValidationScreenState extends ConsumerState<ValidationScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceMuted,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(

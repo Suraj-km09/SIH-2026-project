@@ -93,6 +93,37 @@ void main() {
       expect(res.meta?.pages, 3);
     });
 
+    test('AuditLogsResponse parses when list elements are dynamic maps and supports pagination fallback', () {
+      final dynamicJson = <String, dynamic>{
+        'success': true,
+        'data': [
+          <dynamic, dynamic>{
+            '_id': 'aud-002',
+            'user': <dynamic, dynamic>{'_id': 'u2', 'username': 'vishal'},
+            'action': 'ADMIN_LOGIN',
+            'resource': 'Auth',
+            'status': 'SUCCESS',
+            'details': <dynamic, dynamic>{'attempt': 1},
+          }
+        ],
+        'pagination': <dynamic, dynamic>{
+          'total': 428,
+          'limit': 100,
+          'skip': 0,
+          'page': 1,
+          'pages': 5,
+        }
+      };
+
+      final res = AuditLogsResponse.fromJson(dynamicJson);
+      expect(res.logs.length, 1);
+      expect(res.logs.first.id, 'aud-002');
+      expect(res.logs.first.user.username, 'vishal');
+      expect(res.logs.first.details['attempt'], 1);
+      expect(res.meta?.total, 428);
+      expect(res.meta?.pages, 5);
+    });
+
     test('AuditExportResult model holds export metadata', () {
       const result = AuditExportResult(
         content: 'id,action\n1,LOGIN',

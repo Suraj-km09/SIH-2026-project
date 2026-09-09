@@ -1,10 +1,18 @@
+import '../../models/api_error_model.dart';
+
 /// Base domain exception for MineIntel AI.
 class AppException implements Exception {
   final String message;
   final String? code;
   final int? statusCode;
+  final ApiErrorModel? apiError;
 
-  const AppException(this.message, {this.code, this.statusCode});
+  const AppException(
+    this.message, {
+    this.code,
+    this.statusCode,
+    this.apiError,
+  });
 
   @override
   String toString() => message;
@@ -21,8 +29,17 @@ class TimeoutException extends AppException {
 }
 
 class AuthException extends AppException {
-  const AuthException([super.message = 'Invalid username or password.'])
-      : super(code: 'AUTH_ERROR', statusCode: 401);
+  final bool isIncorrectPassword;
+  final bool isInvalidPassword;
+
+  const AuthException(
+    super.message, {
+    this.isIncorrectPassword = false,
+    this.isInvalidPassword = false,
+    super.code = 'AUTH_ERROR',
+    super.statusCode = 401,
+    super.apiError,
+  });
 }
 
 class TokenExpiredException extends AppException {
@@ -31,8 +48,15 @@ class TokenExpiredException extends AppException {
 }
 
 class PermissionException extends AppException {
-  const PermissionException([super.message = 'You do not have permission to perform this action.'])
-      : super(code: 'FORBIDDEN', statusCode: 403);
+  final bool isAccountInactive;
+
+  const PermissionException(
+    super.message, {
+    this.isAccountInactive = false,
+    super.code = 'FORBIDDEN',
+    super.statusCode = 403,
+    super.apiError,
+  });
 }
 
 class NotFoundException extends AppException {
@@ -48,14 +72,26 @@ class ConflictException extends AppException {
     super.message, {
     this.isDuplicateDocument = false,
     this.isAgentConcurrency = false,
-  }) : super(code: 'CONFLICT', statusCode: 409);
+    super.code = 'CONFLICT',
+    super.statusCode = 409,
+    super.apiError,
+  });
 }
 
 class ValidationException extends AppException {
   final Map<String, dynamic>? errors;
+  final String? validationMessage;
+  final Map<String, String>? fieldErrors;
 
-  const ValidationException(super.message, {this.errors})
-      : super(code: 'VALIDATION_ERROR', statusCode: 400);
+  const ValidationException(
+    super.message, {
+    this.errors,
+    this.validationMessage,
+    this.fieldErrors,
+    super.code = 'VALIDATION_ERROR',
+    super.statusCode = 400,
+    super.apiError,
+  });
 }
 
 class ServerException extends AppException {

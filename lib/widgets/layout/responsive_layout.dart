@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/responsive.dart';
+import '../../state/settings_state.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 
@@ -127,7 +129,7 @@ class AdaptiveMasterDetail extends StatelessWidget {
 
 /// Responsive Scaffold providing Mobile Bottom Navigation, Tablet Rail,
 /// and Windows Desktop Persistent Sidebar Navigation.
-class ResponsiveScaffold extends StatelessWidget {
+class ResponsiveScaffold extends ConsumerWidget {
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final Widget body;
@@ -148,7 +150,7 @@ class ResponsiveScaffold extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ResponsiveBuilder(
       builder: (ctx, isMobile, isTablet, isDesktop) {
         if (isDesktop) {
@@ -156,23 +158,30 @@ class ResponsiveScaffold extends StatelessWidget {
         } else if (isTablet) {
           return _buildTabletLayout(ctx);
         } else {
-          return _buildMobileLayout(ctx);
+          return _buildMobileLayout(ctx, ref);
         }
       },
     );
   }
 
   Widget _buildDesktopLayout(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final sidebarColor = colorScheme.surface;
+    final bodyBgColor = colorScheme.surfaceContainerHighest;
+    final sidebarBorderColor = isDark ? const Color(0xFF374151) : AppColors.border;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: bodyBgColor,
       body: Row(
         children: [
           // Collapsible / Categorized Desktop Sidebar
           Container(
             width: 260,
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
-              border: Border(right: BorderSide(color: AppColors.border, width: 1)),
+            decoration: BoxDecoration(
+              color: sidebarColor,
+              border: Border(right: BorderSide(color: sidebarBorderColor, width: 1)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,10 +208,10 @@ class ResponsiveScaffold extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('MineIntel AI', style: AppTypography.headlineSmall),
+                            Text('MineIntel AI', style: AppTypography.headlineSmall.copyWith(color: colorScheme.onSurface)),
                             Text(
                               'Mining Intelligence Platform',
-                              style: AppTypography.labelSmall,
+                              style: AppTypography.labelSmall.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.6)),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
@@ -211,49 +220,49 @@ class ResponsiveScaffold extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Divider(),
+                Divider(color: sidebarBorderColor),
 
                 // Scrollable Navigation Items
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     children: [
-                      _buildNavSectionHeader('OPERATIONS'),
-                      _buildSidebarItem(0, Icons.dashboard_outlined, 'Dashboard'),
-                      _buildSidebarItem(1, Icons.terminal_outlined, 'Command Centre'),
-                      _buildSidebarItem(2, Icons.folder_outlined, 'Documents'),
-                      _buildSidebarItem(3, Icons.table_chart_outlined, 'Data Extraction'),
-                      _buildSidebarItem(4, Icons.rule_outlined, 'Validation'),
+                      _buildNavSectionHeader('OPERATIONS', context),
+                      _buildSidebarItem(0, Icons.dashboard_outlined, 'Dashboard', context),
+                      _buildSidebarItem(1, Icons.terminal_outlined, 'Command Centre', context),
+                      _buildSidebarItem(2, Icons.folder_outlined, 'Documents', context),
+                      _buildSidebarItem(3, Icons.table_chart_outlined, 'Data Extraction', context),
+                      _buildSidebarItem(4, Icons.rule_outlined, 'Validation', context),
 
                       const SizedBox(height: 12),
-                      _buildNavSectionHeader('INTELLIGENCE & AI'),
-                      _buildSidebarItem(5, Icons.auto_awesome_outlined, 'AI Assistant'),
-                      _buildSidebarItem(6, Icons.travel_explore_outlined, 'Knowledge Base'),
-                      _buildSidebarItem(7, Icons.trending_up_outlined, 'Mining Analytics'),
-                      _buildSidebarItem(8, Icons.map_outlined, 'GIS Spatial Map'),
-                      _buildSidebarItem(9, Icons.hub_outlined, 'Topics'),
-                      _buildSidebarItem(10, Icons.smart_toy_outlined, 'Autonomous Agents'),
+                      _buildNavSectionHeader('INTELLIGENCE & AI', context),
+                      _buildSidebarItem(5, Icons.auto_awesome_outlined, 'AI Assistant', context),
+                      _buildSidebarItem(6, Icons.travel_explore_outlined, 'Knowledge Base', context),
+                      _buildSidebarItem(7, Icons.trending_up_outlined, 'Mining Analytics', context),
+                      _buildSidebarItem(8, Icons.map_outlined, 'GIS Spatial Map', context),
+                      _buildSidebarItem(9, Icons.hub_outlined, 'Topics', context),
+                      _buildSidebarItem(10, Icons.smart_toy_outlined, 'Autonomous Agents', context),
 
                       const SizedBox(height: 12),
-                      _buildNavSectionHeader('GOVERNANCE'),
-                      _buildSidebarItem(11, Icons.description_outlined, 'Statutory Reports'),
+                      _buildNavSectionHeader('GOVERNANCE', context),
+                      _buildSidebarItem(11, Icons.description_outlined, 'Statutory Reports', context),
                       if (userRole == 'reviewer' || userRole == 'admin')
-                        _buildSidebarItem(12, Icons.rate_review_outlined, 'Review Queue'),
-                      _buildSidebarItem(13, Icons.history_outlined, 'Audit Trail'),
+                        _buildSidebarItem(12, Icons.rate_review_outlined, 'Review Queue', context),
+                      _buildSidebarItem(13, Icons.history_outlined, 'Audit Trail', context),
                       if (userRole == 'admin')
-                        _buildSidebarItem(14, Icons.admin_panel_settings_outlined, 'Admin Console'),
+                        _buildSidebarItem(14, Icons.admin_panel_settings_outlined, 'Admin Console', context),
 
                       const SizedBox(height: 12),
-                      _buildNavSectionHeader('SYSTEM'),
-                      _buildSidebarItem(15, Icons.notifications_none_outlined, 'Notifications'),
-                      _buildSidebarItem(16, Icons.settings_outlined, 'Settings'),
-                      _buildSidebarItem(17, Icons.help_outline, 'Help & FAQs'),
+                      _buildNavSectionHeader('SYSTEM', context),
+                      _buildSidebarItem(15, Icons.notifications_none_outlined, 'Notifications', context),
+                      _buildSidebarItem(16, Icons.settings_outlined, 'Settings', context),
+                      _buildSidebarItem(17, Icons.help_outline, 'Help & FAQs', context),
                     ],
                   ),
                 ),
 
                 // User Identity Footer
-                const Divider(),
+                Divider(color: sidebarBorderColor),
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -277,7 +286,7 @@ class ResponsiveScaffold extends StatelessWidget {
                           children: [
                             Text(
                               username ?? 'User',
-                              style: AppTypography.labelMedium,
+                              style: AppTypography.labelMedium.copyWith(color: colorScheme.onSurface),
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
@@ -312,8 +321,12 @@ class ResponsiveScaffold extends StatelessWidget {
   }
 
   Widget _buildTabletLayout(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final bodyBgColor = colorScheme.surfaceContainerHighest;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: bodyBgColor,
       body: Row(
         children: [
           NavigationRail(
@@ -378,14 +391,33 @@ class ResponsiveScaffold extends StatelessWidget {
     );
   }
 
-  Widget _buildMobileLayout(BuildContext context) {
+  Widget _buildMobileLayout(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final bodyBgColor = theme.colorScheme.surfaceContainerHighest;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: bodyBgColor,
+      drawer: _buildMobileDrawer(context, ref),
       appBar: AppBar(
+        backgroundColor: theme.colorScheme.surface,
+        foregroundColor: theme.colorScheme.onSurface,
+        elevation: 0,
+        scrolledUnderElevation: 1,
+        shadowColor: AppColors.border,
+        leading: Builder(
+          builder: (ctx) => IconButton(
+            icon: Icon(Icons.menu, color: theme.colorScheme.onSurface),
+            tooltip: 'Open Navigation Menu',
+            onPressed: () => Scaffold.of(ctx).openDrawer(),
+          ),
+        ),
         title: Text(
           title,
-          style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
-          maxLines: 1,
+          style: AppTypography.headlineMedium.copyWith(
+            color: theme.colorScheme.onSurface,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
           overflow: TextOverflow.ellipsis,
         ),
         actions: actions,
@@ -430,13 +462,191 @@ class ResponsiveScaffold extends StatelessWidget {
     );
   }
 
+  Widget _buildMobileDrawer(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    final isDark = themeMode == ThemeMode.dark;
+
+    return Drawer(
+      backgroundColor: const Color(0xFF1B202A),
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Top Theme Toggle Header matching Screenshot 3
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                      color: Colors.white70,
+                      size: 22,
+                    ),
+                    tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                    onPressed: () {
+                      ref.read(settingsNotifierProvider.notifier).updateTheme(isDark ? 'light' : 'dark');
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Navigation Sections matching Screenshot 3
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  _buildDrawerSectionHeader('INTELLIGENCE'),
+                  _buildDrawerItem(context, 6, Icons.storage_outlined, 'Knowledge Base'),
+                  _buildDrawerItem(context, 5, Icons.chat_bubble_outline, 'AI Assistant'),
+                  _buildDrawerItem(context, 7, Icons.bar_chart_outlined, 'Analytics'),
+                  _buildDrawerItem(context, 9, Icons.auto_awesome_outlined, 'Intelligence'),
+                  _buildDrawerItem(context, 9, Icons.tag, 'Topics'),
+
+                  const SizedBox(height: 16),
+                  _buildDrawerSectionHeader('GOVERNANCE'),
+                  _buildDrawerItem(context, 11, Icons.description_outlined, 'Reports'),
+                  _buildDrawerItem(context, 13, Icons.receipt_long_outlined, 'Audit Trail'),
+                  if (userRole == 'admin')
+                    _buildDrawerItem(context, 14, Icons.group_outlined, 'User Management'),
+                  if (userRole == 'reviewer' || userRole == 'admin')
+                    _buildDrawerItem(context, 12, Icons.fact_check_outlined, 'Pending Reviews'),
+
+                  const SizedBox(height: 16),
+                  _buildDrawerSectionHeader('SYSTEM'),
+                  _buildDrawerItem(context, 18, Icons.show_chart, 'System Health'),
+                  _buildDrawerItem(context, 17, Icons.help_outline, 'Help & Support'),
+                ],
+              ),
+            ),
+
+            // Profile Identity Footer matching Screenshot 3
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Color(0xFF2D3748), width: 1)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF262C38),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFD97706), width: 1.5),
+                    ),
+                    child: Center(
+                      child: Text(
+                        (username != null && username!.isNotEmpty) ? username![0].toUpperCase() : 'V',
+                        style: const TextStyle(
+                          color: Color(0xFFD97706),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          username ?? 'vishal',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          userRole?.toUpperCase() ?? 'ADMIN',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem(BuildContext context, int index, IconData icon, String label) {
+    final isSelected = selectedIndex == index;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFF262C38) : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        border: isSelected ? Border.all(color: const Color(0xFFD97706), width: 1.5) : null,
+      ),
+      child: ListTile(
+        dense: true,
+        leading: Icon(
+          icon,
+          size: 20,
+          color: isSelected ? const Color(0xFFD97706) : Colors.white70,
+        ),
+        title: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFFD97706) : Colors.white,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            fontSize: 14,
+          ),
+        ),
+        onTap: () {
+          Navigator.pop(context);
+          onDestinationSelected(index);
+        },
+      ),
+    );
+  }
+
+  Widget _buildDrawerSectionHeader(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, top: 12, bottom: 6),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Color(0xFF94A3B8),
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+
   Widget _buildTopAppBar(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final appBarColor = colorScheme.surface;
+    final borderColor = isDark ? const Color(0xFF374151) : AppColors.border;
+    final titleColor = colorScheme.onSurface;
+
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+      decoration: BoxDecoration(
+        color: appBarColor,
+        border: Border(bottom: BorderSide(color: borderColor, width: 1)),
+        boxShadow: isDark
+            ? [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 4, offset: const Offset(0, 2))]
+            : [BoxShadow(color: AppColors.border.withValues(alpha: 0.5), blurRadius: 4, offset: const Offset(0, 2))],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -444,7 +654,10 @@ class ResponsiveScaffold extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: AppTypography.headlineMedium,
+              style: AppTypography.headlineMedium.copyWith(
+                color: titleColor,
+                fontWeight: FontWeight.w700,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -459,7 +672,7 @@ class ResponsiveScaffold extends StatelessWidget {
     );
   }
 
-  Widget _buildNavSectionHeader(String label) {
+  Widget _buildNavSectionHeader(String label, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(left: 12, top: 12, bottom: 6),
       child: Text(
@@ -472,8 +685,15 @@ class ResponsiveScaffold extends StatelessWidget {
     );
   }
 
-  Widget _buildSidebarItem(int index, IconData icon, String label) {
+  Widget _buildSidebarItem(int index, IconData icon, String label, BuildContext context) {
     final isSelected = selectedIndex == index;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final selectedBg = isDark ? const Color(0xFF374151) : AppColors.surfaceMuted;
+    final selectedTextColor = colorScheme.onSurface;
+    final unselectedTextColor = isDark ? AppColors.textTertiary : AppColors.textSecondary;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Material(
@@ -484,7 +704,7 @@ class ResponsiveScaffold extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.surfaceMuted : Colors.transparent,
+              color: isSelected ? selectedBg : Colors.transparent,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -492,14 +712,14 @@ class ResponsiveScaffold extends StatelessWidget {
                 Icon(
                   icon,
                   size: 18,
-                  color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                  color: isSelected ? selectedTextColor : unselectedTextColor,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     label,
                     style: AppTypography.labelMedium.copyWith(
-                      color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                      color: isSelected ? selectedTextColor : unselectedTextColor,
                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -514,10 +734,13 @@ class ResponsiveScaffold extends StatelessWidget {
   }
 
   void _showMobileMoreSheet(BuildContext context) {
+    final theme = Theme.of(context);
+    final sheetBg = theme.colorScheme.surface;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: sheetBg,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -557,9 +780,10 @@ class ResponsiveScaffold extends StatelessWidget {
   }
 
   Widget _buildMoreTile(BuildContext ctx, int index, IconData icon, String title) {
+    final colorScheme = Theme.of(ctx).colorScheme;
     return ListTile(
-      leading: Icon(icon, color: AppColors.textPrimary, size: 20),
-      title: Text(title, style: AppTypography.labelMedium),
+      leading: Icon(icon, color: colorScheme.onSurface, size: 20),
+      title: Text(title, style: AppTypography.labelMedium.copyWith(color: colorScheme.onSurface)),
       dense: true,
       onTap: () {
         Navigator.pop(ctx);

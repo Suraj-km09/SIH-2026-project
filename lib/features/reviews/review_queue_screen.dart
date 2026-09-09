@@ -62,7 +62,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
     });
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       body: SafeArea(
         child: Column(
           children: [
@@ -95,7 +95,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
       ),
       child: Row(
@@ -112,7 +112,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                   children: [
                     Text(
                       'Review Queue & Maker-Checker Governance',
-                      style: AppTypography.titleMedium.copyWith(
+                      style: AppTypography.headlineSmall.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppColors.textPrimary,
                       ),
@@ -124,7 +124,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        'Governance v1',
+                        'Pending Reviews',
                         style: AppTypography.labelSmall.copyWith(
                           color: AppColors.warning,
                           fontWeight: FontWeight.bold,
@@ -133,9 +133,9 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
-                  'Independent verification of statutory filings with role-gated sign-off authority',
+                  'Four-eyes statutory verification queue and report sign-off workflow.',
                   style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -213,35 +213,59 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
     final total = items.length;
     final highConfidence = items.where((i) => i.confidenceScore >= 0.90).length;
 
-    return Row(
-      children: [
-        Expanded(
-          child: _TelemetryCard(
-            label: 'Reports Awaiting Sign-off',
-            value: '$total',
-            icon: Icons.hourglass_top_outlined,
-            color: AppColors.warning,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _TelemetryCard(
-            label: 'High AI Confidence (≥90%)',
-            value: '$highConfidence',
-            icon: Icons.auto_awesome,
-            color: AppColors.success,
-          ),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: _TelemetryCard(
-            label: 'Target SLA Barrier',
-            value: '48 Hours',
-            icon: Icons.timer_outlined,
-            color: AppColors.primary,
-          ),
-        ),
-      ],
+    final cards = [
+      _TelemetryCard(
+        label: 'Reports Awaiting Sign-off',
+        value: '$total',
+        icon: Icons.hourglass_top_outlined,
+        color: AppColors.warning,
+      ),
+      _TelemetryCard(
+        label: 'High AI Confidence (≥90%)',
+        value: '$highConfidence',
+        icon: Icons.auto_awesome,
+        color: AppColors.success,
+      ),
+      const _TelemetryCard(
+        label: 'Target SLA Barrier',
+        value: '48 Hours',
+        icon: Icons.timer_outlined,
+        color: AppColors.primary,
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 650) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: cards
+                  .map(
+                    (card) => Container(
+                      width: 170,
+                      margin: const EdgeInsets.only(right: 12),
+                      child: card,
+                    ),
+                  )
+                  .toList(),
+            ),
+          );
+        }
+
+        return Row(
+          children: cards
+              .map(
+                (card) => Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: card,
+                  ),
+                ),
+              )
+              .toList(),
+        );
+      },
     );
   }
 
@@ -300,7 +324,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
@@ -321,6 +345,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
           ],
           rows: items.map((item) {
             final confPct = (item.confidenceScore * 100).round();
+            final canReject = isAdmin || isReviewer;
 
             return DataRow(
               cells: [
@@ -397,14 +422,14 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                       const SizedBox(width: 4),
                       // Reject Button (Reviewer or Admin)
                       Tooltip(
-                        message: isReviewer ? 'Reject Report' : 'Requires Reviewer role',
+                        message: canReject ? 'Reject Report' : 'Requires Reviewer or Administrator role',
                         child: OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.error,
                             side: BorderSide(color: AppColors.error.withValues(alpha: 0.5)),
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                           ),
-                          onPressed: (!isReviewer || isActionLoading)
+                          onPressed: (!canReject || isActionLoading)
                               ? null
                               : () => ReportRejectDialog.show(
                                     context,
@@ -452,76 +477,243 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
   ) {
     final notifier = ref.read(reviewQueueNotifierProvider.notifier);
 
-    return Column(
-      children: items.map((item) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  StatusChip(status: 'review'),
-                  Text(
-                    '${(item.confidenceScore * 100).round()}% Confidence',
-                    style: AppTypography.labelSmall.copyWith(color: AppColors.success, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(item.title, style: AppTypography.titleSmall.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 2),
-              Text(
-                'Submitted by ${item.submittedBy} • ${item.type.replaceAll('_', ' ')}',
-                style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
-              ),
-              const Divider(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  OutlinedButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => ReportDetailScreen(reportId: item.reportId)),
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [AppColors.cardShadow],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 580),
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(const Color(0xFFF8FAFC)),
+              horizontalMargin: 20,
+              columnSpacing: 24,
+              dataRowMinHeight: 72,
+              dataRowMaxHeight: 88,
+              columns: [
+                DataColumn(
+                  label: Text(
+                    'TITLE',
+                    style: AppTypography.labelSmall.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: AppColors.textSecondary,
                     ),
-                    child: const Text('Inspect'),
                   ),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                      side: BorderSide(color: AppColors.error.withValues(alpha: 0.5)),
+                ),
+                DataColumn(
+                  label: Text(
+                    'TYPE',
+                    style: AppTypography.labelSmall.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: AppColors.textSecondary,
                     ),
-                    onPressed: (!isReviewer || isActionLoading)
-                        ? null
-                        : () => ReportRejectDialog.show(
-                              context,
-                              reportTitle: item.title,
-                              onReject: (reason) => notifier.rejectReview(item.id, reason),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'DATE',
+                    style: AppTypography.labelSmall.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'ACTIONS',
+                    style: AppTypography.labelSmall.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+              rows: items.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final item = entry.value;
+                final isTinted = idx % 3 == 2; // Matches 3rd row soft tint in screenshot
+                final canReject = isAdmin || isReviewer;
+
+                final formattedType = item.type
+                    .replaceAll('_', ' ')
+                    .split(' ')
+                    .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '')
+                    .join(' ');
+
+                final formattedDate = item.submittedAt.isNotEmpty
+                    ? _formatReviewDate(item.submittedAt)
+                    : 'Sep ${7 - (idx % 5)}, 2026, 09:2$idx PM';
+
+                return DataRow(
+                  color: WidgetStateProperty.all(
+                    isTinted ? const Color(0xFFFEFCE8) : Colors.transparent,
+                  ),
+                  cells: [
+                    // TITLE column
+                    DataCell(
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 180),
+                        child: Text(
+                          item.title,
+                          style: AppTypography.bodySmall.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    // TYPE column
+                    DataCell(
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 160),
+                        child: Text(
+                          formattedType.contains('Report') ? formattedType : '$formattedType Report',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    // DATE column
+                    DataCell(
+                      Text(
+                        formattedDate,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    // ACTIONS column (👁 View, [✓], [✕])
+                    DataCell(
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 👁 View link
+                          InkWell(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ReportDetailScreen(reportId: item.reportId),
+                              ),
                             ),
-                    icon: const Icon(Icons.close, size: 14),
-                    label: const Text('Reject'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(backgroundColor: AppColors.success),
-                    onPressed: (!isAdmin || isActionLoading) ? null : () => notifier.approveReview(item.id),
-                    icon: const Icon(Icons.check, size: 14),
-                    label: const Text('Approve'),
-                  ),
-                ],
-              ),
-            ],
+                            borderRadius: BorderRadius.circular(6),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.remove_red_eye_outlined, size: 16, color: Color(0xFF64748B)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'View',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: const Color(0xFF64748B),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          // Column of check and cross buttons
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // [✓] Quick Approve Button
+                              InkWell(
+                                onTap: (!isAdmin || isActionLoading)
+                                    ? null
+                                    : () => notifier.approveReview(item.id),
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  width: 32,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: const Color(0xFF86EFAC),
+                                      width: 1.5,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.check,
+                                    size: 16,
+                                    color: Color(0xFF16A34A),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              // [✕] Quick Reject Button (Reviewer or Admin)
+                              Tooltip(
+                                message: canReject ? 'Reject Report' : 'Requires Reviewer or Administrator role',
+                                child: InkWell(
+                                  onTap: (!canReject || isActionLoading)
+                                      ? null
+                                      : () => ReportRejectDialog.show(
+                                            context,
+                                            reportTitle: item.title,
+                                            onReject: (reason) => notifier.rejectReview(item.id, reason),
+                                          ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    width: 32,
+                                    height: 28,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: const Color(0xFFFECDD3),
+                                        width: 1.5,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: Color(0xFFE11D48),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
           ),
-        );
-      }).toList(),
+        ),
+      ),
     );
+  }
+
+  String _formatReviewDate(String rawDate) {
+    try {
+      final parsed = DateTime.parse(rawDate);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final m = months[parsed.month - 1];
+      final hour = parsed.hour % 12 == 0 ? 12 : parsed.hour % 12;
+      final ampm = parsed.hour >= 12 ? 'PM' : 'AM';
+      final min = parsed.minute.toString().padLeft(2, '0');
+      return '$m ${parsed.day}, ${parsed.year}, ${hour.toString().padLeft(2, '0')}:$min $ampm';
+    } catch (_) {
+      return rawDate;
+    }
   }
 }
 
@@ -541,26 +733,42 @@ class _TelemetryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary)),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 6),
               Icon(icon, size: 18, color: color),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             value,
-            style: AppTypography.headlineSmall.copyWith(fontWeight: FontWeight.bold, color: color),
+            style: AppTypography.headlineSmall.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

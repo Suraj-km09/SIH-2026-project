@@ -13,6 +13,7 @@ import 'widgets/anomalies_card.dart';
 import 'widgets/dispatch_breakdown_card.dart';
 import 'widgets/production_breakdown_card.dart';
 import 'widgets/trends_chart_card.dart';
+import 'widgets/trending_items_card.dart';
 import 'widgets/variance_analysis_card.dart';
 
 /// Main Mining Analytics & Production Screen for MineIntel AI.
@@ -42,7 +43,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     // Error State (when no prior data exists)
     if (state.isError && (state.overview == null || state.kpis == null)) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         body: ErrorStateWidget(
           title: 'Unable to Load Analytics',
           message: state.errorMessage ?? 'Failed to connect to MineIntel Analytics API.',
@@ -53,9 +54,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
     // Initial or Loading State (when no data exists yet)
     if (state.overview == null || state.kpis == null) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: AppLoadingIndicator(
+      return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+        body: const AppLoadingIndicator(
           message: 'Loading mining production and dispatch analytics...',
         ),
       );
@@ -64,7 +65,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     // Empty State
     if (state.isEmpty) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         body: EmptyStateWidget(
           icon: Icons.trending_up_outlined,
           title: 'No Analytics Records',
@@ -82,7 +83,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final kpis = state.kpis!;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       body: RefreshIndicator(
         onRefresh: () => ref.read(analyticsNotifierProvider.notifier).refresh(),
         color: AppColors.primary,
@@ -92,32 +93,82 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Screen Header with Refresh Action
+              // Screen Header with Circular Filter & Refresh Action matching Screen 2
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Mining Analytics & Production', style: AppTypography.headlineLarge),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Production time-series, dispatch modes, variance mathematical analysis, and 3-sigma anomalies.',
-                          style: AppTypography.bodySmall,
+                        const Text(
+                          'Analytics',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111827),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Mining Analytics & Production',
+                          style: TextStyle(
+                            color: Color(0xFF6B7280),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  AppButton(
-                    text: 'Refresh',
-                    icon: Icons.refresh,
-                    variant: AppButtonVariant.outline,
-                    height: 36,
-                    isLoading: state.isLoading,
-                    onPressed: () =>
-                        ref.read(analyticsNotifierProvider.notifier).refresh(),
+                  const SizedBox(width: 12),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppButton(
+                        text: 'Refresh',
+                        icon: Icons.refresh,
+                        variant: AppButtonVariant.outline,
+                        height: 36,
+                        isLoading: state.isLoading,
+                        onPressed: () =>
+                            ref.read(analyticsNotifierProvider.notifier).refresh(),
+                      ),
+                      const SizedBox(width: 10),
+                      // Circular Filter Button matching Screen 2 mockup
+                      InkWell(
+                        onTap: () {
+                          // Filter toggle
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            border: Border.all(
+                              color: const Color(0xFFE5E7EB),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.tune_rounded,
+                            color: Color(0xFF111827),
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -132,7 +183,17 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               const SizedBox(height: 24),
 
               // Historical Production vs Dispatch Trends Chart
-              AnalyticsTrendsChartCard(trends: state.trends),
+              AnalyticsTrendsChartCard(
+                trends: state.trends,
+                periods: overview.periods,
+              ),
+              const SizedBox(height: 24),
+
+              // Trending Mining Assets Section (Real Data, No Fake Items)
+              TrendingItemsCard(
+                production: state.production,
+                topMines: overview.topProducingMines,
+              ),
               const SizedBox(height: 24),
 
               // Responsive Categorical Breakdowns
@@ -189,7 +250,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
         boxShadow: const [AppColors.cardShadow],
@@ -226,7 +287,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 }
               },
               selectedColor: AppColors.primary,
-              backgroundColor: AppColors.surfaceMuted,
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               labelStyle: TextStyle(
                 color: isSelected ? AppColors.textInverse : AppColors.textPrimary,
                 fontSize: 12,

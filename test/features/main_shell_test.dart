@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mineintel_ai/features/command_centre/command_centre_screen.dart';
 import 'package:mineintel_ai/features/shell/main_shell.dart';
 import 'package:mineintel_ai/models/user_model.dart';
 import 'package:mineintel_ai/repositories/analytics_repository.dart';
 import 'package:mineintel_ai/repositories/auth_repository.dart';
+import 'package:mineintel_ai/repositories/command_centre_repository.dart';
 import 'package:mineintel_ai/repositories/dashboard_repository.dart';
 import 'package:mineintel_ai/services/secure_storage_service.dart';
 import 'package:mineintel_ai/state/analytics_state.dart';
@@ -50,6 +52,7 @@ void main() {
         authRepositoryProvider.overrideWithValue(MockAuthRepository()),
         dashboardRepositoryProvider.overrideWithValue(const MockDashboardRepository()),
         analyticsRepositoryProvider.overrideWithValue(const MockAnalyticsRepository()),
+        commandCentreRepositoryProvider.overrideWithValue(const MockCommandCentreRepository()),
         secureStorageProvider.overrideWithValue(FakeMainShellStorage()),
         authNotifierProvider.overrideWith(() => TestRoleNotifier(user)),
       ],
@@ -147,7 +150,7 @@ void main() {
       expect(find.text('Admin Console'), findsOneWidget);
     });
 
-    testWidgets('Tapping sidebar item updates active module placeholder',
+    testWidgets('Tapping sidebar item updates active module to Command Centre and placeholders',
         (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1440, 1080);
       tester.view.devicePixelRatio = 1.0;
@@ -170,13 +173,10 @@ void main() {
 
       // Tap Command Centre
       await tester.tap(find.text('Command Centre'));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.text('Command Centre'), findsAtLeastNWidgets(1));
-      expect(
-        find.textContaining('Real-time ingestion pipeline telemetry'),
-        findsOneWidget,
-      );
+      expect(find.byType(CommandCentreScreen), findsOneWidget);
+      expect(find.text('Operations Command Centre'), findsOneWidget);
     });
 
     testWidgets('Mobile viewport renders BottomNavigationBar and top AppBar',

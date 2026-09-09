@@ -79,19 +79,60 @@ void main() {
 
       // Trends chart
       expect(find.text('Production vs Dispatch Trends'), findsOneWidget);
-      expect(find.text('Production'), findsOneWidget);
-      expect(find.text('Dispatch'), findsOneWidget);
+      expect(find.text('Production'), findsAtLeastNWidgets(1));
+      expect(find.text('Dispatch'), findsAtLeastNWidgets(1));
+
+      // Mining Assets Section (Zero bogus e-commerce items)
+      expect(find.text('Trending Mining Assets'), findsOneWidget);
+      expect(find.text('Airdopes'), findsNothing);
+      expect(find.text('boAt'), findsNothing);
+      expect(find.text('DSLR Camera'), findsNothing);
+      expect(find.text('Nikon'), findsNothing);
 
       // Breakdowns
       expect(find.text('Production by Mine & Subsidiary'), findsOneWidget);
       expect(find.text('Dispatch & Evacuation Breakdown'), findsOneWidget);
 
-      // Variance Table
+      // Variance Table & Graph
       expect(find.text('Target vs Actual Variance'), findsOneWidget);
+      expect(find.text('Graph'), findsOneWidget);
+      expect(find.text('Table'), findsOneWidget);
 
       // Anomalies
       expect(find.text('Statistical Anomalies & Outliers'), findsOneWidget);
       expect(find.text('PRODUCTION DISPATCH GAP'), findsOneWidget);
+    });
+
+    testWidgets('Toggles between Graph and Table view in VarianceAnalysisCard',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1440, 1080);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(buildAnalyticsTestHarness());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Ensure VarianceAnalysisCard is scrolled into view
+      await tester.ensureVisible(find.text('Target vs Actual Variance'));
+      await tester.pumpAndSettle();
+
+      // Initially graph view is enabled
+      expect(find.text('Target Volume'), findsOneWidget);
+
+      // Switch to Table view
+      await tester.ensureVisible(find.text('Table'));
+      await tester.tap(find.text('Table'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Target Volume'), findsNothing);
+
+      // Switch back to Graph view
+      await tester.ensureVisible(find.text('Graph'));
+      await tester.tap(find.text('Graph'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Target Volume'), findsOneWidget);
     });
 
     testWidgets('Displays ErrorStateWidget with retry on network failure',

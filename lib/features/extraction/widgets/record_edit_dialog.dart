@@ -234,7 +234,7 @@ class _RecordEditDialogState extends State<RecordEditDialog> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceMuted,
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: AppColors.border),
                       ),
@@ -264,16 +264,16 @@ class _RecordEditDialogState extends State<RecordEditDialog> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceMuted,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: AppColors.borderSubtle),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Ground Truth Source Text (Page ${1}):',
-                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      Text(
+                        'Ground Truth Source Text (Page ${widget.record.pageNumber}):',
+                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -304,7 +304,7 @@ class _RecordEditDialogState extends State<RecordEditDialog> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceMuted,
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: AppColors.border),
                   ),
@@ -338,14 +338,16 @@ class _RecordEditDialogState extends State<RecordEditDialog> {
               const SizedBox(height: 24),
 
               // Actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   TextButton(
                     onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
                     child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
                   ),
-                  const SizedBox(width: 12),
                   ElevatedButton(
                     onPressed: _isSaving ? null : _submit,
                     style: ElevatedButton.styleFrom(

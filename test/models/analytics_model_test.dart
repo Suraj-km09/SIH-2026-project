@@ -142,5 +142,134 @@ void main() {
       expect(params['mine'], 'Rajmahal');
       expect(params.containsKey('period'), isFalse);
     });
+
+    test('AnalyticsOverviewModel parses live backend payload with periods correctly', () {
+      final liveOverview = {
+        'totalDocuments': 11,
+        'totalRecords': 78,
+        'totalProduction': 203635.6,
+        'totalDispatch': 163915.6,
+        'totalTarget': 71067.4,
+        'productionDispatchGap': 39720,
+        'achievementRate': 286.54,
+        'averageValidationScore': '97%',
+        'openIssues': 48,
+        'periods': [
+          {
+            'period': '2021',
+            'production': 20.4,
+            'dispatch': 19.6,
+            'target': 20,
+            'gap': 0.8,
+            'unit': 'MT'
+          },
+          {
+            'period': 'Q1 FY2026',
+            'production': 24000,
+            'dispatch': 15400,
+            'target': 20000,
+            'gap': 8600,
+            'unit': 'MT'
+          }
+        ]
+      };
+
+      final model = AnalyticsOverviewModel.fromJson(liveOverview);
+      expect(model.totalProduction, 203635.6);
+      expect(model.totalDispatch, 163915.6);
+      expect(model.netGap, 39720.0);
+      expect(model.productionTargetAchievement, 286.54);
+      expect(model.periods.length, 2);
+      expect(model.periods[0].period, '2021');
+      expect(model.periods[0].production, 20.4);
+      expect(model.periods[0].dispatch, 19.6);
+      expect(model.periods[1].period, 'Q1 FY2026');
+      expect(model.periods[1].production, 24000.0);
+    });
+
+    test('AnalyticsKpisModel parses live API string metrics correctly', () {
+      final liveKpis = {
+        'totalDocuments': 11,
+        'totalRecords': 78,
+        'totalProduction': '203635.6 MT',
+        'totalDispatch': '163915.6 MT',
+        'totalTarget': '71067.4 MT',
+        'productionDispatchGap': '39720 MT',
+        'achievementRate': '286.54%',
+        'averageValidationScore': '97%',
+        'openIssues': 48
+      };
+
+      final kpis = AnalyticsKpisModel.fromJson(liveKpis);
+      expect(kpis.totalRecords, 78);
+      expect(kpis.totalDocuments, 11);
+      expect(kpis.openIssues, 48);
+      expect(kpis.targetAchievementPct, 286.54);
+      expect(kpis.averageValidationScore, '97%');
+      expect(kpis.averageConfidence, 0.97);
+      expect(kpis.verifiedRecords, 30); // 78 - 48
+    });
+
+    test('VarianceItemModel parses live backend payload correctly', () {
+      final liveVariance = {
+        'period': 'Q1 FY2026',
+        'actualProduction': 24000,
+        'targetProduction': 20000,
+        'variance': 4000,
+        'achievementRate': 120,
+        'dispatch': 15400,
+        'dispatchGap': 8600,
+        'unit': 'MT',
+        'status': 'TARGET_EXCEEDED'
+      };
+
+      final item = VarianceItemModel.fromJson(liveVariance);
+      expect(item.period, 'Q1 FY2026');
+      expect(item.actual, 24000.0);
+      expect(item.target, 20000.0);
+      expect(item.variance, 4000.0);
+      expect(item.variancePct, 120.0);
+      expect(item.isPositive, isTrue);
+      expect(item.status, 'TARGET_EXCEEDED');
+      expect(item.unit, 'MT');
+    });
+
+    test('AnomalyItemModel parses live statistical outliers with Z-score', () {
+      final liveAnomaly = {
+        'type': 'STATISTICAL_OUTLIER',
+        'recordId': '6a9f09bc83d8283507035820',
+        'documentName': 'MineIntel_AI_Test_Document.pdf',
+        'parameter': 'Raw Coal Production',
+        'value': 128450,
+        'unit': 'tonnes',
+        'period': 'April 2026',
+        'mean': 8695.53,
+        'deviation': 119754.47,
+        'zScore': 4.67,
+        'reason': 'Value 128450 deviates significantly from mean 8695.5 (Z-score: 4.7)'
+      };
+
+      final model = AnomalyItemModel.fromJson(liveAnomaly);
+      expect(model.type, 'STATISTICAL_OUTLIER');
+      expect(model.parameter, 'Raw Coal Production');
+      expect(model.documentName, 'MineIntel_AI_Test_Document.pdf');
+      expect(model.zScore, 4.67);
+      expect(model.isCritical, isTrue);
+      expect(model.details, contains('Z-score: 4.7'));
+    });
+
+    test('TrendItemModel parses string value numbers safely', () {
+      final trendJson = {
+        'period': '2021',
+        'parameter': 'Coal Production',
+        'value': '10.2',
+        'unit': 'MT'
+      };
+
+      final trend = TrendItemModel.fromJson(trendJson);
+      expect(trend.period, '2021');
+      expect(trend.production, 10.2);
+      expect(trend.parameter, 'Coal Production');
+    });
   });
 }

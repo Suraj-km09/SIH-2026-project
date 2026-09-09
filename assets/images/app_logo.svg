@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="100%" height="100%">
+  <rect width="1024" height="1024" rx="230" fill="#111828"/>
+  <!-- Connected Trend Line -->
+  <line x1="293.3" y1="662.4" x2="458.5" y2="494.4" stroke="#ffffff" stroke-width="49.2" stroke-linecap="round"/>
+  <line x1="458.5" y1="494.4" x2="568.1" y2="590.2" stroke="#ffffff" stroke-width="49.2" stroke-linecap="round"/>
+  <line x1="568.1" y1="590.2" x2="747.9" y2="461.8" stroke="#ffffff" stroke-width="49.2" stroke-linecap="round"/>
+  <!-- Data Nodes -->
+  <circle cx="293.3" cy="662.4" r="59.4" fill="#ffffff"/>
+  <circle cx="458.5" cy="494.4" r="59.4" fill="#ffffff"/>
+  <circle cx="568.1" cy="590.2" r="59.4" fill="#ffffff"/>
+  <circle cx="747.9" cy="461.8" r="59.4" fill="#ffffff"/>
+  <!-- Left Star (Sparkle) -->
+  <path d="M 286.1 385.0 Q 293.1 422.0 325.0 430.1 Q 293.1 438.2 286.1 475.2 Q 279.1 438.2 247.2 430.1 Q 279.1 422.0 286.1 385.0 Z" fill="#ffffff"/>
+  <!-- Right Star (Sparkle) -->
+  <path d="M 592.2 294.0 Q 602.9 351.1 651.6 363.6 Q 602.9 376.1 592.2 433.2 Q 581.5 376.1 532.8 363.6 Q 581.5 351.1 592.2 294.0 Z" fill="#ffffff"/>
+</svg>

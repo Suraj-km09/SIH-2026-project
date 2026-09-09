@@ -26,7 +26,7 @@ class DashboardRecentActivityCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceMuted,
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
@@ -70,6 +70,9 @@ class DashboardRecentActivityCard extends StatelessWidget {
               itemBuilder: (context, index) {
                 final item = activity[index];
                 final iconConfig = _resolveActionIcon(item.action);
+                final displayAction = item.action.isNotEmpty
+                    ? item.action.replaceAll('_', ' ')
+                    : (item.title ?? 'Activity Event');
 
                 return Row(
                   children: [
@@ -90,23 +93,25 @@ class DashboardRecentActivityCard extends StatelessWidget {
                             children: [
                               Flexible(
                                 child: Text(
-                                  item.action.replaceAll('_', ' '),
+                                  displayAction,
                                   style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w600),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: AppColors.badgeNeutralBg,
-                                  borderRadius: BorderRadius.circular(4),
+                              if (item.resource.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.badgeNeutralBg,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    item.resource,
+                                    style: const TextStyle(fontSize: 10, color: AppColors.badgeNeutralText),
+                                  ),
                                 ),
-                                child: Text(
-                                  item.resource,
-                                  style: const TextStyle(fontSize: 10, color: AppColors.badgeNeutralText),
-                                ),
-                              ),
+                              ],
                             ],
                           ),
                           const SizedBox(height: 2),
@@ -152,6 +157,10 @@ class DashboardRecentActivityCard extends StatelessWidget {
       return const _ActionIconConfig(Icons.rule_folder_outlined, AppColors.accentTeal, Color(0xFFF0FDFA));
     } else if (act.contains('REPORT')) {
       return const _ActionIconConfig(Icons.description_outlined, AppColors.accentIndigo, Color(0xFFEEF2FF));
+    } else if (act.contains('LOGIN') || act.contains('LOGOUT') || act.contains('AUTH')) {
+      return const _ActionIconConfig(Icons.lock_clock_outlined, AppColors.accentBlue, Color(0xFFEFF6FF));
+    } else if (act.contains('INDEX') || act.contains('KNOWLEDGE')) {
+      return const _ActionIconConfig(Icons.auto_stories_outlined, AppColors.accentTeal, Color(0xFFF0FDFA));
     }
     return const _ActionIconConfig(Icons.bubble_chart_outlined, AppColors.textSecondary, AppColors.surfaceMuted);
   }

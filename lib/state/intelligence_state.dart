@@ -20,6 +20,9 @@ class IntelligenceState {
   final String? selectedDocB;
   final DocumentEntitiesResponse? documentEntities;
   final DocumentSimilarityResponse? documentSimilarity;
+  final List<IntelligenceChangesResponse>? changesHistory;
+  final List<Map<String, String>> availableDocuments;
+  final bool isComparing;
   final bool isAnalyzing;
   final bool isLinkingEvidence;
   final String? errorMessage;
@@ -35,10 +38,13 @@ class IntelligenceState {
     this.similarity,
     this.selectedDocForSimilarity,
     this.changes,
+    this.changesHistory,
     this.selectedDocA,
     this.selectedDocB,
     this.documentEntities,
     this.documentSimilarity,
+    this.availableDocuments = const [],
+    this.isComparing = false,
     this.isAnalyzing = false,
     this.isLinkingEvidence = false,
     this.errorMessage,
@@ -66,10 +72,13 @@ class IntelligenceState {
     IntelligenceSimilarityResult? similarity,
     String? selectedDocForSimilarity,
     IntelligenceChangesResponse? changes,
+    List<IntelligenceChangesResponse>? changesHistory,
     String? selectedDocA,
     String? selectedDocB,
     DocumentEntitiesResponse? documentEntities,
     DocumentSimilarityResponse? documentSimilarity,
+    List<Map<String, String>>? availableDocuments,
+    bool? isComparing,
     bool? isAnalyzing,
     bool? isLinkingEvidence,
     String? errorMessage,
@@ -88,10 +97,13 @@ class IntelligenceState {
       selectedDocForSimilarity:
           selectedDocForSimilarity ?? this.selectedDocForSimilarity,
       changes: changes ?? this.changes,
+      changesHistory: changesHistory ?? this.changesHistory,
       selectedDocA: selectedDocA ?? this.selectedDocA,
       selectedDocB: selectedDocB ?? this.selectedDocB,
       documentEntities: documentEntities ?? this.documentEntities,
       documentSimilarity: documentSimilarity ?? this.documentSimilarity,
+      availableDocuments: availableDocuments ?? this.availableDocuments,
+      isComparing: isComparing ?? this.isComparing,
       isAnalyzing: isAnalyzing ?? this.isAnalyzing,
       isLinkingEvidence: isLinkingEvidence ?? this.isLinkingEvidence,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
@@ -130,6 +142,7 @@ class IntelligenceNotifier extends Notifier<IntelligenceState> {
           _repository.getSimilarity(documentId: documentId);
       final changesFuture =
           _repository.getChanges(docA: state.selectedDocA, docB: state.selectedDocB);
+      final docsFuture = _repository.getAvailableDocuments();
 
       final results = await Future.wait([
         overviewFuture,
@@ -138,9 +151,20 @@ class IntelligenceNotifier extends Notifier<IntelligenceState> {
         clustersFuture,
         similarityFuture,
         changesFuture,
+        docsFuture,
       ]);
 
       if (!ref.mounted) return;
+
+      final docsList = results[6] as List<Map<String, String>>;
+      String? defaultDocA = state.selectedDocA;
+      String? defaultDocB = state.selectedDocB;
+      if (defaultDocA == null && docsList.isNotEmpty) {
+        defaultDocA = docsList.first['id'];
+      }
+      if (defaultDocB == null && docsList.length > 1) {
+        defaultDocB = docsList[1]['id'];
+      }
 
       state = state.copyWith(
         status: ViewStatus.success,
@@ -150,6 +174,9 @@ class IntelligenceNotifier extends Notifier<IntelligenceState> {
         clusters: results[3] as List<IntelligenceCluster>,
         similarity: results[4] as IntelligenceSimilarityResult,
         changes: results[5] as IntelligenceChangesResponse,
+        availableDocuments: docsList,
+        selectedDocA: defaultDocA,
+        selectedDocB: defaultDocB,
       );
     } catch (e) {
       if (!ref.mounted) return;
@@ -189,14 +216,14 @@ class IntelligenceNotifier extends Notifier<IntelligenceState> {
 
   /// Request parameter variance differences between two document IDs.
   Future<void> compareDocuments({required String docA, required String docB}) async {
-    state = state.copyWith(selectedDocA: docA, selectedDocB: docB);
+    state = state.copyWith(selectedDocA: docA, selectedDocB: docB, isComparing: true);
     try {
       final changes = await _repository.getChanges(docA: docA, docB: docB);
       if (!ref.mounted) return;
-      state = state.copyWith(changes: changes);
+      state = state.copyWith(changes: changes, isComparing: false);
     } catch (e) {
       if (!ref.mounted) return;
-      state = state.copyWith(errorMessage: e.toString());
+      state = state.copyWith(errorMessage: e.toString(), isComparing: false);
     }
   }
 

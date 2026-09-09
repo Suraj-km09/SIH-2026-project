@@ -37,28 +37,32 @@ class AppButton extends StatelessWidget {
 
     switch (variant) {
       case AppButtonVariant.primary:
-        bg = isEnabled ? AppColors.primary : AppColors.surfaceMuted;
-        fg = isEnabled ? AppColors.textInverse : AppColors.textTertiary;
+        bg = isLoading
+            ? AppColors.primary.withValues(alpha: 0.88)
+            : (isEnabled ? AppColors.primary : AppColors.surfaceMuted);
+        fg = isEnabled || isLoading ? AppColors.textInverse : AppColors.textTertiary;
         break;
       case AppButtonVariant.secondary:
-        bg = isEnabled ? AppColors.surfaceMuted : AppColors.surfaceHover;
-        fg = isEnabled ? AppColors.textPrimary : AppColors.textTertiary;
+        bg = isEnabled || isLoading ? AppColors.surfaceMuted : AppColors.surfaceHover;
+        fg = isEnabled || isLoading ? AppColors.textPrimary : AppColors.textTertiary;
         break;
       case AppButtonVariant.outline:
         bg = Colors.transparent;
-        fg = isEnabled ? AppColors.textPrimary : AppColors.textTertiary;
+        fg = isEnabled || isLoading ? AppColors.textPrimary : AppColors.textTertiary;
         border = BorderSide(
-          color: isEnabled ? AppColors.border : AppColors.borderSubtle,
+          color: isEnabled || isLoading ? AppColors.border : AppColors.borderSubtle,
           width: 1,
         );
         break;
       case AppButtonVariant.danger:
-        bg = isEnabled ? AppColors.error : AppColors.errorBg;
-        fg = isEnabled ? AppColors.textInverse : AppColors.textTertiary;
+        bg = isLoading
+            ? AppColors.error.withValues(alpha: 0.88)
+            : (isEnabled ? AppColors.error : AppColors.errorBg);
+        fg = isEnabled || isLoading ? AppColors.textInverse : AppColors.textTertiary;
         break;
       case AppButtonVariant.text:
         bg = Colors.transparent;
-        fg = isEnabled ? AppColors.textPrimary : AppColors.textTertiary;
+        fg = isEnabled || isLoading ? AppColors.textPrimary : AppColors.textTertiary;
         break;
     }
 
@@ -68,14 +72,14 @@ class AppButton extends StatelessWidget {
       children: [
         if (isLoading) ...[
           SizedBox(
-            width: 16,
-            height: 16,
+            width: 18,
+            height: 18,
             child: CircularProgressIndicator(
-              strokeWidth: 2,
+              strokeWidth: 2.2,
               valueColor: AlwaysStoppedAnimation<Color>(fg),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
         ] else if (icon != null) ...[
           Icon(icon, size: 18, color: fg),
           const SizedBox(width: 8),

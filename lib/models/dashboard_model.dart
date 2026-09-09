@@ -15,11 +15,30 @@ class DashboardOverviewModel {
     this.alerts = const [],
   });
 
-  factory DashboardOverviewModel.fromJson(Map<String, dynamic> json) {
+  DashboardOverviewModel copyWith({
+    DashboardStatsModel? stats,
+    List<DashboardRecentDocumentModel>? recentDocuments,
+    List<DashboardActivityModel>? recentActivity,
+    List<DashboardAlertModel>? alerts,
+  }) {
     return DashboardOverviewModel(
-      stats: json['stats'] != null
-          ? DashboardStatsModel.fromJson(json['stats'] as Map<String, dynamic>)
-          : const DashboardStatsModel(),
+      stats: stats ?? this.stats,
+      recentDocuments: recentDocuments ?? this.recentDocuments,
+      recentActivity: recentActivity ?? this.recentActivity,
+      alerts: alerts ?? this.alerts,
+    );
+  }
+
+  factory DashboardOverviewModel.fromJson(Map<String, dynamic> json) {
+    DashboardStatsModel stats;
+    if (json['stats'] != null) {
+      stats = DashboardStatsModel.fromJson(json['stats'] as Map<String, dynamic>);
+    } else {
+      stats = DashboardStatsModel.fromJson(json);
+    }
+
+    return DashboardOverviewModel(
+      stats: stats,
       recentDocuments: (json['recentDocuments'] as List<dynamic>?)
               ?.map((e) => DashboardRecentDocumentModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -57,11 +76,53 @@ class DashboardStatsModel {
   });
 
   factory DashboardStatsModel.fromJson(Map<String, dynamic> json) {
+    int total = (json['totalDocuments'] as num?)?.toInt() ?? 0;
+    int validated = (json['validatedDocuments'] as num?)?.toInt() ?? 0;
+    int pending = (json['pendingReviews'] as num?)?.toInt() ?? 0;
+    double avgQuality = (json['avgQualityScore'] as num?)?.toDouble() ?? 0.0;
+
+    // Support live Express backend nested payload
+    if (json['documents'] is Map) {
+      final docMap = json['documents'] as Map<String, dynamic>;
+      final docTotal = (docMap['total'] as num?)?.toInt() ?? 0;
+      if (docTotal > 0 || total == 0) total = docTotal;
+
+      final docProcessed = (docMap['processed'] as num?)?.toInt() ?? 0;
+      if (docProcessed > 0 || validated == 0) validated = docProcessed;
+
+      final docPending = (docMap['pending'] as num?)?.toInt() ?? 0;
+      if (docPending > 0 || pending == 0) pending = docPending;
+
+      final docScore = (docMap['successRate'] as num?)?.toDouble() ?? 0.0;
+      if (docScore > 0 && avgQuality == 0.0) avgQuality = docScore;
+    }
+
+    if (json['extraction'] is Map) {
+      final extMap = json['extraction'] as Map<String, dynamic>;
+      final extRecords = (extMap['totalRecords'] as num?)?.toInt() ?? 0;
+      if (extRecords > 0 && total == 0) {
+        total = extRecords;
+      }
+    }
+
+    if (json['validation'] is Map) {
+      final valMap = json['validation'] as Map<String, dynamic>;
+      final openIssues = (valMap['openIssues'] as num?)?.toInt() ?? 0;
+      if (openIssues > 0 && pending == 0) pending = openIssues;
+
+      final valScoreStr = valMap['score']?.toString() ?? '';
+      if (valScoreStr.isNotEmpty && avgQuality == 0.0) {
+        final cleaned = valScoreStr.replaceAll('%', '').trim();
+        final parsed = double.tryParse(cleaned);
+        if (parsed != null) avgQuality = parsed;
+      }
+    }
+
     return DashboardStatsModel(
-      totalDocuments: (json['totalDocuments'] as num?)?.toInt() ?? 0,
-      validatedDocuments: (json['validatedDocuments'] as num?)?.toInt() ?? 0,
-      pendingReviews: (json['pendingReviews'] as num?)?.toInt() ?? 0,
-      avgQualityScore: (json['avgQualityScore'] as num?)?.toDouble() ?? 0.0,
+      totalDocuments: total,
+      validatedDocuments: validated,
+      pendingReviews: pending,
+      avgQualityScore: avgQuality,
     );
   }
 
@@ -89,12 +150,52 @@ class DashboardKpisModel {
   });
 
   factory DashboardKpisModel.fromJson(Map<String, dynamic> json) {
+    int docCount = (json['documentCount'] as num?)?.toInt() ?? 0;
+    int procCount = (json['processedCount'] as num?)?.toInt() ?? 0;
+    int errCount = (json['errorCount'] as num?)?.toInt() ?? 0;
+    double extAcc = (json['extractionAccuracy'] as num?)?.toDouble() ?? 0.0;
+    double compRate = (json['complianceRate'] as num?)?.toDouble() ?? 0.0;
+
+    // Support live Express backend KPI payload
+    if (json['totalDocs'] is Map) {
+      final val = (json['totalDocs']['value'] as num?)?.toInt();
+      if (val != null && (val > 0 || docCount == 0)) docCount = val;
+    }
+    if (json['processedDocs'] is Map) {
+      final val = (json['processedDocs']['value'] as num?)?.toInt();
+      if (val != null && (val > 0 || procCount == 0)) procCount = val;
+    }
+    if (json['failedDocs'] is Map) {
+      final val = (json['failedDocs']['value'] as num?)?.toInt();
+      if (val != null && (val > 0 || errCount == 0)) errCount = val;
+    }
+    if (json['totalExtractedRecords'] is Map) {
+      final val = (json['totalExtractedRecords']['value'] as num?)?.toInt();
+      if (val != null && val > 0 && docCount == 0) {
+        docCount = val;
+      }
+    }
+    if (json['averageConfidenceScore'] is Map) {
+      final val = (json['averageConfidenceScore']['value'] as num?)?.toDouble();
+      if (val != null && val > 0 && extAcc == 0.0) {
+        extAcc = val <= 1.0 ? val * 100 : val;
+      }
+      final pctStr = json['averageConfidenceScore']['percentage']?.toString();
+      if (pctStr != null && extAcc == 0.0) {
+        final parsed = double.tryParse(pctStr.replaceAll('%', '').trim());
+        if (parsed != null) extAcc = parsed;
+      }
+    }
+    if (compRate == 0.0 && extAcc > 0.0) {
+      compRate = extAcc;
+    }
+
     return DashboardKpisModel(
-      documentCount: (json['documentCount'] as num?)?.toInt() ?? 0,
-      processedCount: (json['processedCount'] as num?)?.toInt() ?? 0,
-      errorCount: (json['errorCount'] as num?)?.toInt() ?? 0,
-      extractionAccuracy: (json['extractionAccuracy'] as num?)?.toDouble() ?? 0.0,
-      complianceRate: (json['complianceRate'] as num?)?.toDouble() ?? 0.0,
+      documentCount: docCount,
+      processedCount: procCount,
+      errorCount: errCount,
+      extractionAccuracy: extAcc,
+      complianceRate: compRate,
     );
   }
 
@@ -113,6 +214,10 @@ class DashboardActivityModel {
   final String resource;
   final String timestamp;
   final String user;
+  final String? type;
+  final String? title;
+  final String? description;
+  final String? status;
 
   const DashboardActivityModel({
     required this.id,
@@ -120,15 +225,59 @@ class DashboardActivityModel {
     required this.resource,
     required this.timestamp,
     required this.user,
+    this.type,
+    this.title,
+    this.description,
+    this.status,
   });
 
   factory DashboardActivityModel.fromJson(Map<String, dynamic> json) {
+    String action = json['action'] as String? ?? json['type'] as String? ?? '';
+    String resource = json['resource'] as String? ?? '';
+    final title = json['title'] as String? ?? '';
+    if (resource.isEmpty && title.contains(' on ')) {
+      final parts = title.split(' on ');
+      if (parts.length > 1) {
+        resource = parts.last.trim();
+        if (action.isEmpty) {
+          action = parts.first.trim();
+        }
+      }
+    }
+    if (action.isEmpty && title.isNotEmpty) {
+      action = title;
+    }
+    if (resource.isEmpty) {
+      final statusStr = json['status'] as String? ?? '';
+      if (statusStr.isNotEmpty) {
+        resource = statusStr;
+      } else {
+        resource = 'System';
+      }
+    }
+
+    String userStr = '';
+    if (json['user'] is String) {
+      userStr = json['user'] as String;
+    } else if (json['user'] is Map) {
+      final uMap = json['user'] as Map;
+      userStr = uMap['username']?.toString() ?? uMap['name']?.toString() ?? '';
+    } else if (json['userId'] != null) {
+      userStr = json['userId'].toString();
+    }
+
     return DashboardActivityModel(
       id: json['id'] as String? ?? json['_id'] as String? ?? '',
-      action: json['action'] as String? ?? '',
-      resource: json['resource'] as String? ?? '',
-      timestamp: json['timestamp'] as String? ?? '',
-      user: json['user'] as String? ?? '',
+      action: action,
+      resource: resource,
+      timestamp: json['timestamp'] as String? ??
+          json['createdAt'] as String? ??
+          '',
+      user: userStr,
+      type: json['type'] as String?,
+      title: title.isNotEmpty ? title : null,
+      description: json['description'] as String?,
+      status: json['status'] as String?,
     );
   }
 
@@ -138,6 +287,10 @@ class DashboardActivityModel {
         'resource': resource,
         'timestamp': timestamp,
         'user': user,
+        if (type != null) 'type': type,
+        if (title != null) 'title': title,
+        if (description != null) 'description': description,
+        if (status != null) 'status': status,
       };
 }
 

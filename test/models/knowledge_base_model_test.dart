@@ -98,5 +98,60 @@ void main() {
       expect(resp.results.first.similarity, 0.942);
       expect(resp.results.first.documentName, 'DGMS_Ventilation.pdf');
     });
+
+    test('KnowledgeBaseSearchResponse parses live server format with data array and similarityScore', () {
+      final liveJson = {
+        'success': true,
+        'data': [
+          {
+            '_id': '6a9edf28bbdbd96149cce56f',
+            'chunkId': '6a9edf28bbdbd96149cce56f',
+            'documentId': '6a9f087b4092c5b8b61a9944',
+            'documentName': 'mineintel_test_report.pdf',
+            'snippet': 'MineIntel AI - Mining Production Test Report Mine: Jayant Mine',
+            'similarityScore': 0.6651,
+          },
+        ],
+      };
+
+      final resp = KnowledgeBaseSearchResponse.fromJson(liveJson);
+      expect(resp.results.length, 1);
+      expect(resp.results.first.chunkId, '6a9edf28bbdbd96149cce56f');
+      expect(resp.results.first.documentName, 'mineintel_test_report.pdf');
+      expect(resp.results.first.text, contains('Mining Production Test Report'));
+      expect(resp.results.first.similarity, 0.6651);
+    });
+
+    test('KnowledgeBaseListResponse parses live server format with meta and documents list', () {
+      final liveJson = {
+        'success': true,
+        'data': [
+          {
+            '_id': '6a9f087b4092c5b8b61a9944',
+            'filename': 'mineintel_test.pdf',
+            'originalName': 'MineIntel_AI_Test_Document.pdf',
+            'isIndexed': true,
+            'chunksCount': 1,
+            'lastIndexedAt': '2026-09-07T15:58:32.457Z',
+          },
+        ],
+        'meta': {
+          'total': 11,
+          'page': 1,
+          'limit': 50,
+          'pages': 1,
+          'totalIndexedDocuments': 5,
+          'totalVectorChunks': 6,
+        },
+      };
+
+      final listResp = KnowledgeBaseListResponse.fromJson(liveJson);
+      expect(listResp.documents.length, 1);
+      expect(listResp.documents.first.id, '6a9f087b4092c5b8b61a9944');
+      expect(listResp.documents.first.originalName, 'MineIntel_AI_Test_Document.pdf');
+      expect(listResp.meta.total, 11);
+      expect(listResp.meta.totalIndexedDocuments, 5);
+      expect(listResp.meta.totalVectorChunks, 6);
+    });
   });
 }

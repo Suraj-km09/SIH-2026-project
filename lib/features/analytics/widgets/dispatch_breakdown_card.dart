@@ -23,7 +23,7 @@ class DispatchBreakdownCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceMuted,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -63,7 +63,7 @@ class DispatchBreakdownCard extends StatelessWidget {
               child: Text('No mine dispatch records found.', style: AppTypography.bodySmall),
             )
           else
-            ..._buildMineBars(dispatch.byMine),
+            ..._buildMineBars(context, dispatch.byMine),
 
           const SizedBox(height: 20),
           const Divider(height: 1),
@@ -86,13 +86,13 @@ class DispatchBreakdownCard extends StatelessWidget {
               child: Text('No subsidiary dispatch records found.', style: AppTypography.bodySmall),
             )
           else
-            ..._buildSubsidiaryBars(dispatch.bySubsidiary),
+            ..._buildSubsidiaryBars(context, dispatch.bySubsidiary),
         ],
       ),
     );
   }
 
-  List<Widget> _buildMineBars(List<MineDispatchModel> items) {
+  List<Widget> _buildMineBars(BuildContext context, List<MineDispatchModel> items) {
     double maxVal = 0.0;
     for (final item in items) {
       maxVal = max(maxVal, item.dispatch);
@@ -123,7 +123,7 @@ class DispatchBreakdownCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: ratio,
                 minHeight: 8,
-                backgroundColor: AppColors.surfaceMuted,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
               ),
             ),
@@ -133,7 +133,7 @@ class DispatchBreakdownCard extends StatelessWidget {
     }).toList();
   }
 
-  List<Widget> _buildSubsidiaryBars(List<SubsidiaryDispatchModel> items) {
+  List<Widget> _buildSubsidiaryBars(BuildContext context, List<SubsidiaryDispatchModel> items) {
     double maxVal = 0.0;
     for (final item in items) {
       maxVal = max(maxVal, item.dispatch);
@@ -164,7 +164,7 @@ class DispatchBreakdownCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: ratio,
                 minHeight: 8,
-                backgroundColor: AppColors.surfaceMuted,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentIndigo),
               ),
             ),

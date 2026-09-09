@@ -45,6 +45,41 @@ void main() {
 
       final approveBtn = tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Approve').first);
       expect(approveBtn.onPressed, isNotNull);
+
+      // Verify Admin ALSO has Reject enabled
+      final rejectBtn = tester.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Reject').first);
+      expect(rejectBtn.onPressed, isNotNull);
+    });
+
+    testWidgets('ReviewQueueScreen renders without overflow on small mobile phone (360x700)', (tester) async {
+      tester.view.physicalSize = const Size(360, 700);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final reportRepo = MockReportRepository();
+      final reviewRepo = MockReviewRepository(reportRepository: reportRepo);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            reportRepositoryProvider.overrideWithValue(reportRepo),
+            reviewRepositoryProvider.overrideWithValue(reviewRepo),
+            authNotifierProvider.overrideWith(() => _FakeAuthNotifier(
+                  const UserModel(id: 'u_admin', username: 'admin', role: 'admin'),
+                )),
+          ],
+          child: const MaterialApp(
+            home: ReviewQueueScreen(),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Review Queue & Maker-Checker Governance'), findsOneWidget);
+      expect(find.text('Reports Awaiting Sign-off'), findsOneWidget);
+      expect(find.text('Target SLA Barrier'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('Reviewer user has Reject enabled but Approve disabled (Admin Only)', (tester) async {

@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/utils/file_saver.dart';
 import '../models/report_model.dart';
 import '../repositories/report_repository.dart';
 import 'app_state.dart';
@@ -143,15 +146,70 @@ class ReportListNotifier extends Notifier<ReportListState> {
     }
   }
 
-  Future<dynamic> exportReport(String id, String format) async {
+  Future<String?> exportReport(String id, String format, {String? reportTitle}) async {
+    state = state.copyWith(isActionLoading: true, errorMessage: null);
     try {
-      final result = await _repository.exportReport(id, format);
+      final data = await _repository.exportReport(id, format);
+      if (data == null) throw Exception('No export data received');
+
+      final fmt = format.toLowerCase().replaceAll('.', '');
+      String titlePart = (reportTitle ?? '').trim();
+      if (titlePart.isEmpty) {
+        final match = state.reports.where((r) => r.id == id).firstOrNull;
+        if (match != null) titlePart = match.title;
+      }
+      if (titlePart.isEmpty) titlePart = 'report_$id';
+
+      final cleanTitle = titlePart
+          .replaceAll(RegExp(r'[^\w\s-]'), '')
+          .trim()
+          .replaceAll(RegExp(r'\s+'), '_');
+      final shortId = id.length > 8 ? id.substring(0, 8) : id;
+      final fileName = 'Statutory_Report_${cleanTitle}_$shortId.$fmt';
+
+      Uint8List bytes;
+      String mimeType;
+      if (data is Uint8List) {
+        bytes = data;
+      } else if (data is List<int>) {
+        bytes = Uint8List.fromList(data);
+      } else if (data is String) {
+        bytes = Uint8List.fromList(utf8.encode(data));
+      } else if (data is Map || data is List) {
+        bytes = Uint8List.fromList(utf8.encode(const JsonEncoder.withIndent('  ').convert(data)));
+      } else {
+        bytes = Uint8List.fromList(utf8.encode(data.toString()));
+      }
+
+      switch (fmt) {
+        case 'pdf':
+          mimeType = 'application/pdf';
+          break;
+        case 'docx':
+        case 'doc':
+          mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          break;
+        case 'csv':
+          mimeType = 'text/csv;charset=utf-8';
+          break;
+        case 'json':
+          mimeType = 'application/json;charset=utf-8';
+          break;
+        default:
+          mimeType = 'application/octet-stream';
+      }
+
+      final savedPath = await FileSaver.saveAndLaunchFile(bytes, fileName, mimeType: mimeType);
       state = state.copyWith(
-        actionMessage: 'Report exported to ${format.toUpperCase()} successfully.',
+        isActionLoading: false,
+        actionMessage: 'Report exported as $fileName. Download started.',
       );
-      return result;
+      return savedPath ?? fileName;
     } catch (e) {
-      state = state.copyWith(errorMessage: e.toString());
+      state = state.copyWith(
+        isActionLoading: false,
+        errorMessage: 'Export failed: $e',
+      );
       return null;
     }
   }
@@ -346,6 +404,70 @@ class ReportDetailNotifier extends Notifier<ReportDetailState> {
         errorMessage: e.toString(),
       );
       return false;
+    }
+  }
+
+  Future<String?> exportReport(String id, String format, {String? reportTitle}) async {
+    state = state.copyWith(isActionLoading: true, errorMessage: null);
+    try {
+      final data = await _repository.exportReport(id, format);
+      if (data == null) throw Exception('No export data received');
+
+      final fmt = format.toLowerCase().replaceAll('.', '');
+      String titlePart = (reportTitle ?? state.report?.title ?? '').trim();
+      if (titlePart.isEmpty) titlePart = 'report_$id';
+
+      final cleanTitle = titlePart
+          .replaceAll(RegExp(r'[^\w\s-]'), '')
+          .trim()
+          .replaceAll(RegExp(r'\s+'), '_');
+      final shortId = id.length > 8 ? id.substring(0, 8) : id;
+      final fileName = 'Statutory_Report_${cleanTitle}_$shortId.$fmt';
+
+      Uint8List bytes;
+      String mimeType;
+      if (data is Uint8List) {
+        bytes = data;
+      } else if (data is List<int>) {
+        bytes = Uint8List.fromList(data);
+      } else if (data is String) {
+        bytes = Uint8List.fromList(utf8.encode(data));
+      } else if (data is Map || data is List) {
+        bytes = Uint8List.fromList(utf8.encode(const JsonEncoder.withIndent('  ').convert(data)));
+      } else {
+        bytes = Uint8List.fromList(utf8.encode(data.toString()));
+      }
+
+      switch (fmt) {
+        case 'pdf':
+          mimeType = 'application/pdf';
+          break;
+        case 'docx':
+        case 'doc':
+          mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          break;
+        case 'csv':
+          mimeType = 'text/csv;charset=utf-8';
+          break;
+        case 'json':
+          mimeType = 'application/json;charset=utf-8';
+          break;
+        default:
+          mimeType = 'application/octet-stream';
+      }
+
+      final savedPath = await FileSaver.saveAndLaunchFile(bytes, fileName, mimeType: mimeType);
+      state = state.copyWith(
+        isActionLoading: false,
+        actionMessage: 'Report exported as $fileName. Download started.',
+      );
+      return savedPath ?? fileName;
+    } catch (e) {
+      state = state.copyWith(
+        isActionLoading: false,
+        errorMessage: 'Export failed: $e',
+      );
+      return null;
     }
   }
 }

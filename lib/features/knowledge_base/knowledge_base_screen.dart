@@ -71,7 +71,7 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
     });
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       body: Column(
         children: [
           // Header with KPI Stats Cards
@@ -79,7 +79,7 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
 
           // Tab Bar
           Container(
-            color: AppColors.surface,
+            color: Theme.of(context).colorScheme.surface,
             child: TabBar(
               controller: _tabController,
               indicatorColor: AppColors.primary,
@@ -87,14 +87,35 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
               unselectedLabelColor: AppColors.textSecondary,
               isScrollable: true,
               tabAlignment: TabAlignment.start,
+              labelPadding: const EdgeInsets.symmetric(horizontal: 14),
               tabs: const [
                 Tab(
-                  icon: Icon(Icons.inventory_2_outlined, size: 18),
-                  text: 'Vector Indexing Directory',
+                  height: 42,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.inventory_2_outlined, size: 16),
+                      SizedBox(width: 6),
+                      Text(
+                        'Vector Indexing Directory',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ],
+                  ),
                 ),
                 Tab(
-                  icon: Icon(Icons.travel_explore_outlined, size: 18),
-                  text: 'Semantic RAG Search Sandbox',
+                  height: 42,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.travel_explore_outlined, size: 16),
+                      SizedBox(width: 6),
+                      Text(
+                        'Semantic RAG Search Sandbox',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -124,83 +145,148 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
     final chunks = state.meta.totalVectorChunks;
     final rate = total > 0 ? ((indexed / total) * 100).toStringAsFixed(0) : '0';
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      color: AppColors.surface,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 650;
+
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isNarrow ? 14 : 20,
+            vertical: isNarrow ? 10 : 16,
+          ),
+          color: Theme.of(context).colorScheme.surface,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.hub_outlined, color: AppColors.primary, size: 22),
+              Row(
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(isNarrow ? 6 : 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.hub_outlined, color: AppColors.primary, size: isNarrow ? 18 : 22),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Knowledge Base & Vector Engine',
+                          style: (isNarrow ? AppTypography.titleMedium : AppTypography.headlineLarge)
+                              .copyWith(fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'Document chunking, 768-dim embeddings, and semantic RAG retrieval',
+                          style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Knowledge Base & Vector Engine',
-                      style: AppTypography.headlineLarge.copyWith(fontWeight: FontWeight.bold),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              SizedBox(height: isNarrow ? 10 : 14),
+
+              // Compact 3-Stat Grid Row
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      'Total Documents',
+                      total.toString(),
+                      Icons.description_outlined,
+                      AppColors.primary,
+                      isCompact: isNarrow,
                     ),
-                    Text(
-                      'Document chunking, 768-dim embeddings, and semantic RAG retrieval',
-                      style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(width: isNarrow ? 6 : 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Indexed for RAG',
+                      '$indexed ($rate%)',
+                      Icons.check_circle_outline,
+                      AppColors.success,
+                      isCompact: isNarrow,
                     ),
-                  ],
-                ),
+                  ),
+                  SizedBox(width: isNarrow ? 6 : 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Total Vector Chunks',
+                      chunks.toString(),
+                      Icons.grain,
+                      AppColors.accentTeal,
+                      isCompact: isNarrow,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-
-          // Stat Cards
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isNarrow = constraints.maxWidth < 650;
-              return isNarrow
-                  ? Column(
-                      children: [
-                        _buildStatCard('Total Documents', total.toString(), Icons.description_outlined, AppColors.primary),
-                        const SizedBox(height: 8),
-                        _buildStatCard('Indexed for RAG', '$indexed ($rate%)', Icons.check_circle_outline, AppColors.success),
-                        const SizedBox(height: 8),
-                        _buildStatCard('Total Vector Chunks', chunks.toString(), Icons.grain, AppColors.accentTeal),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatCard('Total Documents', total.toString(), Icons.description_outlined, AppColors.primary),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildStatCard('Indexed for RAG', '$indexed ($rate%)', Icons.check_circle_outline, AppColors.success),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildStatCard('Total Vector Chunks', chunks.toString(), Icons.grain, AppColors.accentTeal),
-                        ),
-                      ],
-                    );
-            },
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color, {
+    bool isCompact = false,
+  }) {
+    if (isCompact) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 14),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 3),
+            Text(
+              value,
+              style: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: color,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -215,9 +301,21 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(title, style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary)),
-                Text(value, style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  title,
+                  style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: AppTypography.titleMedium.copyWith(fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
@@ -293,7 +391,7 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
         scrollDirection: Axis.horizontal,
         child: Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppColors.border),
           ),
@@ -420,7 +518,7 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
         final isIndexing = state.isIndexing(doc.id);
 
         return Card(
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
             side: BorderSide(color: AppColors.border),
@@ -462,40 +560,50 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
                   style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
                 ),
                 const Divider(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    if (isIndexing)
-                      const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    else
-                      ElevatedButton.icon(
-                        icon: Icon(doc.isIndexed ? Icons.refresh : Icons.play_arrow, size: 14),
-                        label: Text(doc.isIndexed ? 'Re-index' : 'Index Now'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      if (isIndexing)
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      else
+                        ElevatedButton.icon(
+                          icon: Icon(doc.isIndexed ? Icons.refresh : Icons.play_arrow, size: 14),
+                          label: Text(doc.isIndexed ? 'Re-index' : 'Index Now'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          ),
+                          onPressed: () => _triggerIndexing(doc.id),
                         ),
-                        onPressed: () => _triggerIndexing(doc.id),
-                      ),
-                    if (doc.isIndexed) ...[
-                      const SizedBox(width: 8),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.visibility_outlined, size: 14),
-                        label: const Text('Chunks'),
-                        onPressed: () => _inspectChunks(doc.id),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 18),
-                        onPressed: () => _confirmDeleteIndex(doc.id, doc.originalName),
-                      ),
+                      if (doc.isIndexed) ...[
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.visibility_outlined, size: 14),
+                          label: const Text('Chunks'),
+                          style: OutlinedButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          ),
+                          onPressed: () => _inspectChunks(doc.id),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 18),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => _confirmDeleteIndex(doc.id, doc.originalName),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -554,7 +662,7 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
         // Query Box & Settings
         Container(
           padding: const EdgeInsets.all(16),
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -564,15 +672,16 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
                     child: TextField(
                       controller: _ragQueryController,
                       decoration: InputDecoration(
-                        hintText: 'Enter semantic query (e.g. "overburden targets at Rajmahal" or "airway methane")...',
+                        hintText: 'Enter semantic query (e.g. "airway methane")...',
                         prefixIcon: const Icon(Icons.travel_explore, size: 20),
                         isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       onSubmitted: (_) => _handleSemanticSearch(),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   ElevatedButton.icon(
                     icon: state.isSearching
                         ? const SizedBox(
@@ -585,37 +694,52 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     ),
                     onPressed: state.isSearching ? null : _handleSemanticSearch,
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
+              // Top Results (K) chips with Wrap for zero-overflow responsiveness
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Text('Top Results (K): ', style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary)),
-                  const SizedBox(width: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: [3, 5, 10, 20].map((k) {
-                      final isSelected = _ragTopK == k;
-                      return ChoiceChip(
-                        label: Text('$k'),
-                        selected: isSelected,
-                        selectedColor: AppColors.primary.withValues(alpha: 0.2),
-                        onSelected: (val) {
-                          if (val) setState(() => _ragTopK = k);
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const Spacer(),
-                  if (state.searchResults.isNotEmpty)
-                    TextButton(
-                      onPressed: () => ref.read(knowledgeBaseNotifierProvider.notifier).clearSearch(),
-                      child: const Text('Clear Results'),
+                  Text(
+                    'Top Results (K):',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w600,
                     ),
+                  ),
+                  ...[3, 5, 10, 20].map((k) {
+                    final isSelected = _ragTopK == k;
+                    return ChoiceChip(
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+                      label: Text('$k', style: const TextStyle(fontSize: 12)),
+                      selected: isSelected,
+                      selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                      onSelected: (val) {
+                        if (val) setState(() => _ragTopK = k);
+                      },
+                    );
+                  }),
+                  if (state.searchResults.isNotEmpty) ...[
+                    const SizedBox(width: 4),
+                    TextButton.icon(
+                      icon: const Icon(Icons.close, size: 14),
+                      label: const Text('Clear Results', style: TextStyle(fontSize: 12)),
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      ),
+                      onPressed: () => ref.read(knowledgeBaseNotifierProvider.notifier).clearSearch(),
+                    ),
+                  ],
                 ],
               ),
             ],
@@ -647,9 +771,9 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
                             : (result.similarity >= 0.70 ? AppColors.warning : AppColors.error);
 
                         return Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: AppColors.border),
                           ),
@@ -659,7 +783,7 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: scoreColor.withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(6),
@@ -670,20 +794,28 @@ class _KnowledgeBaseScreenState extends ConsumerState<KnowledgeBaseScreen>
                                       style: AppTypography.labelSmall.copyWith(
                                         color: scoreColor,
                                         fontWeight: FontWeight.bold,
+                                        fontSize: 11,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
+                                  const SizedBox(width: 6),
                                   const Icon(Icons.picture_as_pdf, size: 14, color: AppColors.primary),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    result.documentName,
-                                    style: AppTypography.labelSmall.copyWith(fontWeight: FontWeight.bold),
+                                  Expanded(
+                                    child: Text(
+                                      result.documentName,
+                                      style: AppTypography.labelSmall.copyWith(fontWeight: FontWeight.bold),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 6),
                                   Text(
                                     'Page ${result.pageNumber}',
-                                    style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary),
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11,
+                                    ),
                                   ),
                                 ],
                               ),

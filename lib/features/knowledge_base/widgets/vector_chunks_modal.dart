@@ -83,7 +83,7 @@ class VectorChunksModal extends StatelessWidget {
                         return Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: AppColors.border),
                           ),

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import '../config/env_config.dart';
 import '../core/constants/api_endpoints.dart';
 import '../core/errors/exceptions.dart';
+import '../models/api_error_model.dart';
 import '../services/secure_storage_service.dart';
 
 /// Dio Interceptor managing Bearer token injection, transparent token refresh,
@@ -126,40 +127,72 @@ class AuthInterceptor extends QueuedInterceptor {
       return NetworkException(err.message ?? 'Network connection failure.');
     }
 
-    final data = res.data;
-    String message = 'An unexpected error occurred.';
-    String? errorCode;
-
-    if (data is Map) {
-      message = data['message'] ?? data['error'] ?? message;
-      errorCode = data['error']?.toString() ?? data['code']?.toString();
-    }
+    final apiError = ApiErrorModel.fromResponse(res.data, statusCode: res.statusCode);
+    final message = apiError.message;
+    final errorCode = apiError.code ?? apiError.error;
 
     switch (res.statusCode) {
       case 400:
-        return ValidationException(message);
+      case 422:
+        return ValidationException(
+          message,
+          errors: apiError.fieldErrors.isNotEmpty ? apiError.fieldErrors : null,
+          validationMessage: apiError.validationMessage,
+          fieldErrors: apiError.fieldErrors.isNotEmpty ? apiError.fieldErrors : null,
+          code: errorCode ?? 'VALIDATION_ERROR',
+          statusCode: res.statusCode,
+          apiError: apiError,
+        );
       case 401:
-        if (errorCode == 'TOKEN_EXPIRED') {
+        if (apiError.isTokenExpired) {
           return const TokenExpiredException();
         }
-        return AuthException(message);
+        return AuthException(
+          message,
+          isIncorrectPassword: apiError.isIncorrectPassword,
+          isInvalidPassword: apiError.isInvalidPassword,
+          code: errorCode ?? 'AUTH_ERROR',
+          statusCode: 401,
+          apiError: apiError,
+        );
       case 403:
-        return PermissionException(message);
+        return PermissionException(
+          message,
+          isAccountInactive: apiError.isAccountInactive,
+          code: errorCode ?? 'FORBIDDEN',
+          statusCode: 403,
+          apiError: apiError,
+        );
       case 404:
         return NotFoundException(message);
       case 409:
-        final isDup = errorCode == 'DUPLICATE_DOCUMENT' ||
-            message.toLowerCase().contains('duplicate');
+        final isDup = apiError.isUserExists ||
+            errorCode == 'DUPLICATE_DOCUMENT' ||
+            message.toLowerCase().contains('duplicate') ||
+            message.toLowerCase().contains('already exists');
         final isAgent = message.toLowerCase().contains('currently being processed');
         return ConflictException(
           message,
           isDuplicateDocument: isDup,
           isAgentConcurrency: isAgent,
+          code: errorCode ?? 'CONFLICT',
+          statusCode: 409,
+          apiError: apiError,
         );
       case 503:
         return ServiceUnavailableException(message);
       case 500:
       default:
+        if (apiError.isValidationError) {
+          return ValidationException(
+            message,
+            validationMessage: apiError.validationMessage,
+            fieldErrors: apiError.fieldErrors.isNotEmpty ? apiError.fieldErrors : null,
+            code: errorCode ?? 'VALIDATION_ERROR',
+            statusCode: res.statusCode,
+            apiError: apiError,
+          );
+        }
         return ServerException(message);
     }
   }

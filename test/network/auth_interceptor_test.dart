@@ -81,6 +81,47 @@ void main() {
       final appEx = interceptor.mapDioException(err);
       expect(appEx, isA<AuthException>());
       expect(appEx.message, equals('Invalid username or password'));
+      expect((appEx as AuthException).isIncorrectPassword, isTrue);
+    });
+
+    test('Maps 400 Mongoose Validation Error with multiple field statements', () {
+      final reqOpts = RequestOptions(path: '/api/v1/auth/login');
+      final res = Response(
+        requestOptions: reqOpts,
+        statusCode: 400,
+        data: {
+          'success': false,
+          'message': 'Validation failed: Field "username" is required and must be a string; Field "password" is required and must be at least 6 characters',
+          'error': 'Field "username" is required and must be a string; Field "password" is required and must be at least 6 characters',
+        },
+      );
+      final err = DioException(requestOptions: reqOpts, response: res);
+
+      final appEx = interceptor.mapDioException(err);
+      expect(appEx, isA<ValidationException>());
+      final valEx = appEx as ValidationException;
+      expect(valEx.fieldErrors, isNotNull);
+      expect(valEx.fieldErrors!['username'], contains('required'));
+      expect(valEx.fieldErrors!['password'], contains('required'));
+    });
+
+    test('Maps 403 ACCOUNT_INACTIVE to PermissionException with isAccountInactive flag', () {
+      final reqOpts = RequestOptions(path: '/api/v1/auth/login');
+      final res = Response(
+        requestOptions: reqOpts,
+        statusCode: 403,
+        data: {
+          'success': false,
+          'message': 'Account is suspended or inactive',
+          'error': 'ACCOUNT_INACTIVE',
+        },
+      );
+      final err = DioException(requestOptions: reqOpts, response: res);
+
+      final appEx = interceptor.mapDioException(err);
+      expect(appEx, isA<PermissionException>());
+      final permEx = appEx as PermissionException;
+      expect(permEx.isAccountInactive, isTrue);
     });
 
     test('Maps 403 to PermissionException', () {

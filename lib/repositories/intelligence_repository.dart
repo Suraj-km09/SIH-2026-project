@@ -28,6 +28,7 @@ abstract class IntelligenceRepository {
   Future<DocumentEntitiesResponse> getDocumentEntities(String documentId);
   Future<DocumentSimilarityResponse> getDocumentSimilarity(String documentId);
   Future<LinkEvidenceResult> linkEvidence(String documentId);
+  Future<List<Map<String, String>>> getAvailableDocuments();
 }
 
 /// Concrete implementation delegating to live API or fallback Mock.
@@ -149,6 +150,14 @@ class IntelligenceRepositoryImpl extends BaseRepository
       return mockRepository!.linkEvidence(documentId);
     }
     return execute(() => _remoteDataSource.linkEvidence(documentId));
+  }
+
+  @override
+  Future<List<Map<String, String>>> getAvailableDocuments() async {
+    if (isMockMode && mockRepository != null) {
+      return mockRepository!.getAvailableDocuments();
+    }
+    return execute(() => _remoteDataSource.getAvailableDocuments());
   }
 }
 
@@ -454,6 +463,25 @@ class MockIntelligenceRepository implements IntelligenceRepository {
       linked: true,
       linksCount: 18,
     );
+  }
+
+  @override
+  Future<List<Map<String, String>>> getAvailableDocuments() async {
+    await Future.delayed(delay);
+    return const [
+      {
+        'id': 'doc-001',
+        'name': 'MineIntel_MultiPeriod_Test_Report.pdf',
+      },
+      {
+        'id': 'doc-002',
+        'name': 'validation_test_bad_data.pdf',
+      },
+      {
+        'id': 'doc-003',
+        'name': 'mineintel_test_report.pdf',
+      },
+    ];
   }
 }
 

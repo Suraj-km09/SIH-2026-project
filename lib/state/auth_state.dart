@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/errors/exceptions.dart';
+import '../core/errors/failures.dart';
 import '../models/user_model.dart';
 import '../repositories/auth_repository.dart';
 import '../services/secure_storage_service.dart';
@@ -18,11 +20,23 @@ class AuthState {
   final AuthStatus status;
   final UserModel? user;
   final String? errorMessage;
+  final String? errorTitle;
+  final String? validationMessage;
+  final Map<String, String>? fieldErrors;
+  final bool isValidationError;
+  final bool isIncorrectPassword;
+  final bool isInvalidPassword;
 
   const AuthState({
     this.status = AuthStatus.initial,
     this.user,
     this.errorMessage,
+    this.errorTitle,
+    this.validationMessage,
+    this.fieldErrors,
+    this.isValidationError = false,
+    this.isIncorrectPassword = false,
+    this.isInvalidPassword = false,
   });
 
   bool get isAuthenticated => status == AuthStatus.authenticated && user != null;
@@ -35,11 +49,23 @@ class AuthState {
     AuthStatus? status,
     UserModel? user,
     String? errorMessage,
+    String? errorTitle,
+    String? validationMessage,
+    Map<String, String>? fieldErrors,
+    bool? isValidationError,
+    bool? isIncorrectPassword,
+    bool? isInvalidPassword,
   }) {
     return AuthState(
       status: status ?? this.status,
       user: user ?? this.user,
       errorMessage: errorMessage ?? this.errorMessage,
+      errorTitle: errorTitle ?? this.errorTitle,
+      validationMessage: validationMessage ?? this.validationMessage,
+      fieldErrors: fieldErrors ?? this.fieldErrors,
+      isValidationError: isValidationError ?? this.isValidationError,
+      isIncorrectPassword: isIncorrectPassword ?? this.isIncorrectPassword,
+      isInvalidPassword: isInvalidPassword ?? this.isInvalidPassword,
     );
   }
 
@@ -49,8 +75,25 @@ class AuthState {
       AuthState(status: AuthStatus.authenticated, user: user);
   factory AuthState.unauthenticated() =>
       const AuthState(status: AuthStatus.unauthenticated);
-  factory AuthState.error(String message) =>
-      AuthState(status: AuthStatus.error, errorMessage: message);
+  factory AuthState.error(
+    String message, {
+    String? errorTitle,
+    String? validationMessage,
+    Map<String, String>? fieldErrors,
+    bool isValidationError = false,
+    bool isIncorrectPassword = false,
+    bool isInvalidPassword = false,
+  }) =>
+      AuthState(
+        status: AuthStatus.error,
+        errorMessage: message,
+        errorTitle: errorTitle,
+        validationMessage: validationMessage,
+        fieldErrors: fieldErrors,
+        isValidationError: isValidationError,
+        isIncorrectPassword: isIncorrectPassword,
+        isInvalidPassword: isInvalidPassword,
+      );
 }
 
 /// Provider for AuthRepository.
@@ -139,7 +182,58 @@ class AuthNotifier extends Notifier<AuthState> {
       state = AuthState.authenticated(result.user);
       return true;
     } catch (e) {
-      state = AuthState.error(e.toString());
+      String cleanMessage;
+      String? title;
+      String? validationMsg;
+      Map<String, String>? fieldErrors;
+      bool isVal = false;
+      bool isIncorrect = false;
+      bool isInvalid = false;
+
+      if (e is ValidationFailure) {
+        title = e.errorTitle ?? 'Validation Error';
+        isVal = true;
+        validationMsg = e.validationMessage ?? e.message;
+        fieldErrors = e.fieldErrors;
+        cleanMessage = e.message;
+      } else if (e is ValidationException) {
+        title = 'Validation Error';
+        isVal = true;
+        validationMsg = e.validationMessage ?? e.message;
+        fieldErrors = e.fieldErrors;
+        cleanMessage = e.message;
+      } else if (e is AuthFailure) {
+        isIncorrect = e.isIncorrectPassword;
+        isInvalid = e.isInvalidPassword;
+        title = e.errorTitle ?? (isIncorrect ? 'Incorrect Password' : (isInvalid ? 'Invalid Password' : 'Authentication Error'));
+        cleanMessage = e.message;
+      } else if (e is AuthException) {
+        isIncorrect = e.isIncorrectPassword;
+        isInvalid = e.isInvalidPassword;
+        title = isIncorrect ? 'Incorrect Password' : (isInvalid ? 'Invalid Password' : 'Authentication Error');
+        cleanMessage = e.message;
+      } else if (e is Failure) {
+        title = e.errorTitle;
+        cleanMessage = e.message;
+      } else if (e is AppException) {
+        title = e.apiError?.errorTitle;
+        cleanMessage = e.message;
+      } else {
+        cleanMessage = e
+            .toString()
+            .replaceFirst(RegExp(r'^[A-Za-z0-9_]+(?:Failure|Exception):\s*'), '')
+            .replaceFirst(RegExp(r'^Exception:\s*'), '');
+      }
+
+      state = AuthState.error(
+        cleanMessage,
+        errorTitle: title,
+        validationMessage: validationMsg,
+        fieldErrors: fieldErrors,
+        isValidationError: isVal,
+        isIncorrectPassword: isIncorrect,
+        isInvalidPassword: isInvalid,
+      );
       return false;
     }
   }
@@ -165,7 +259,38 @@ class AuthNotifier extends Notifier<AuthState> {
       state = AuthState.authenticated(result.user);
       return true;
     } catch (e) {
-      state = AuthState.error(e.toString());
+      String cleanMessage;
+      String? title;
+      String? validationMsg;
+      Map<String, String>? fieldErrors;
+      bool isVal = false;
+
+      if (e is ValidationFailure) {
+        title = e.errorTitle ?? 'Validation Error';
+        isVal = true;
+        validationMsg = e.validationMessage ?? e.message;
+        fieldErrors = e.fieldErrors;
+        cleanMessage = e.message;
+      } else if (e is ValidationException) {
+        title = 'Validation Error';
+        isVal = true;
+        validationMsg = e.validationMessage ?? e.message;
+        fieldErrors = e.fieldErrors;
+        cleanMessage = e.message;
+      } else if (e is Failure) {
+        title = e.errorTitle;
+        cleanMessage = e.message;
+      } else {
+        cleanMessage = e.toString();
+      }
+
+      state = AuthState.error(
+        cleanMessage,
+        errorTitle: title,
+        validationMessage: validationMsg,
+        fieldErrors: fieldErrors,
+        isValidationError: isVal,
+      );
       return false;
     }
   }

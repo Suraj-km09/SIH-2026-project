@@ -53,6 +53,14 @@ class IntelligenceRemoteDataSource {
           .whereType<Map<String, dynamic>>()
           .map(TopicTrend.fromJson)
           .toList();
+    } else if (rawData is Map<String, dynamic>) {
+      final list = rawData['trends'];
+      if (list is List) {
+        return list
+            .whereType<Map<String, dynamic>>()
+            .map(TopicTrend.fromJson)
+            .toList();
+      }
     }
     return [];
   }
@@ -71,7 +79,15 @@ class IntelligenceRemoteDataSource {
       queryParameters: queryParams.isNotEmpty ? queryParams : null,
     );
     final rawData = response.data['data'] ?? response.data;
-    if (rawData is List) {
+    if (rawData is Map<String, dynamic>) {
+      final list = rawData['entities'];
+      if (list is List) {
+        return list
+            .whereType<Map<String, dynamic>>()
+            .map(IntelligenceEntity.fromJson)
+            .toList();
+      }
+    } else if (rawData is List) {
       return rawData
           .whereType<Map<String, dynamic>>()
           .map(IntelligenceEntity.fromJson)
@@ -85,12 +101,47 @@ class IntelligenceRemoteDataSource {
     final response =
         await _apiClient.dio.get(ApiEndpoints.intelligenceClusters);
     final rawData = response.data['data'] ?? response.data;
-    if (rawData is List) {
+    if (rawData is Map<String, dynamic>) {
+      final list = rawData['clusters'];
+      if (list is List) {
+        return list
+            .whereType<Map<String, dynamic>>()
+            .map(IntelligenceCluster.fromJson)
+            .toList();
+      }
+    } else if (rawData is List) {
       return rawData
           .whereType<Map<String, dynamic>>()
           .map(IntelligenceCluster.fromJson)
           .toList();
     }
+    return [];
+  }
+
+  /// GET /documents for comparison selector dropdowns
+  Future<List<Map<String, String>>> getAvailableDocuments() async {
+    try {
+      final response = await _apiClient.dio.get(ApiEndpoints.documents);
+      final rawData = response.data['data'] ?? response.data;
+      List<dynamic>? docList;
+      if (rawData is Map<String, dynamic>) {
+        docList = rawData['documents'] as List<dynamic>?;
+      } else if (rawData is List) {
+        docList = rawData;
+      }
+      if (docList != null) {
+        return docList
+            .whereType<Map<String, dynamic>>()
+            .map((d) => {
+                  'id': d['_id']?.toString() ?? d['id']?.toString() ?? '',
+                  'name': d['originalName']?.toString() ??
+                      d['filename']?.toString() ??
+                      'Document',
+                })
+            .where((m) => m['id']!.isNotEmpty)
+            .toList();
+      }
+    } catch (_) {}
     return [];
   }
 

@@ -117,7 +117,7 @@ class AnalyticsNotifier extends Notifier<AnalyticsState> {
     return AnalyticsState.initial();
   }
 
-  /// Load all analytics payloads concurrently.
+  /// Load all analytics payloads concurrently with resilient fallback.
   Future<void> loadAnalytics({AnalyticsFilter? filter}) async {
     final activeFilter = filter ?? state.activeFilter;
     state = AnalyticsState.loading(previous: state, filter: activeFilter);
@@ -145,7 +145,11 @@ class AnalyticsNotifier extends Notifier<AnalyticsState> {
         activeFilter: activeFilter,
       );
     } catch (e) {
-      state = AnalyticsState.error(e.toString(), previous: state, filter: activeFilter);
+      state = AnalyticsState.error(
+        e.toString(),
+        previous: state,
+        filter: activeFilter,
+      );
     }
   }
 

@@ -150,7 +150,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
 
     if (state.isLoading) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         appBar: AppBar(title: const Text('Document Details')),
         body: const Center(
           child: CircularProgressIndicator(color: AppColors.primary),
@@ -160,7 +160,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
 
     if (state.isError || state.detail == null) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         appBar: AppBar(title: const Text('Document Details')),
         body: Center(
           child: Column(
@@ -195,11 +195,15 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     final metadata = state.metadata;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       appBar: AppBar(
         title: Text(
           doc.originalName,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -417,7 +421,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
         // Page Selector Bar
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           child: Row(
             children: [
               IconButton(
@@ -466,7 +470,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.border),
             ),
@@ -582,7 +586,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppColors.border),
               ),
@@ -610,7 +614,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
                     runSpacing: 8,
                     children: doc.entities!.map((e) {
                       return Chip(
-                        backgroundColor: AppColors.surfaceMuted,
+                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                         avatar: CircleAvatar(
                           backgroundColor: AppColors.accentTeal.withValues(alpha: 0.15),
                           child: Text(
@@ -649,7 +653,7 @@ class _DocumentDetailScreenState extends ConsumerState<DocumentDetailScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),

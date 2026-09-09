@@ -23,7 +23,7 @@ class ProductionBreakdownCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceMuted,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -63,7 +63,7 @@ class ProductionBreakdownCard extends StatelessWidget {
               child: Text('No mine production records found.', style: AppTypography.bodySmall),
             )
           else
-            ..._buildMineBars(production.byMine),
+            ..._buildMineBars(context, production.byMine),
 
           const SizedBox(height: 20),
           const Divider(height: 1),
@@ -86,13 +86,13 @@ class ProductionBreakdownCard extends StatelessWidget {
               child: Text('No subsidiary production records found.', style: AppTypography.bodySmall),
             )
           else
-            ..._buildSubsidiaryBars(production.bySubsidiary),
+            ..._buildSubsidiaryBars(context, production.bySubsidiary),
         ],
       ),
     );
   }
 
-  List<Widget> _buildMineBars(List<MineProductionModel> items) {
+  List<Widget> _buildMineBars(BuildContext context, List<MineProductionModel> items) {
     double maxVal = 0.0;
     for (final item in items) {
       maxVal = max(maxVal, item.production);
@@ -123,7 +123,7 @@ class ProductionBreakdownCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: ratio,
                 minHeight: 8,
-                backgroundColor: AppColors.surfaceMuted,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentTeal),
               ),
             ),
@@ -133,7 +133,7 @@ class ProductionBreakdownCard extends StatelessWidget {
     }).toList();
   }
 
-  List<Widget> _buildSubsidiaryBars(List<SubsidiaryProductionModel> items) {
+  List<Widget> _buildSubsidiaryBars(BuildContext context, List<SubsidiaryProductionModel> items) {
     double maxVal = 0.0;
     for (final item in items) {
       maxVal = max(maxVal, item.production);
@@ -164,7 +164,7 @@ class ProductionBreakdownCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: ratio,
                 minHeight: 8,
-                backgroundColor: AppColors.surfaceMuted,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 valueColor: const AlwaysStoppedAnimation<Color>(AppColors.heroSurfaceLight),
               ),
             ),

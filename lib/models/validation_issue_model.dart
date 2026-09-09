@@ -43,23 +43,36 @@ class ValidationIssueModel {
   bool get isInfo => severity == 'info';
   String? get resolutionNotes => notes;
 
+  /// Safely converts a JSON value to String, handling Map/List/num/bool from backend.
+  static String? safeStr(dynamic v) {
+    if (v == null) return null;
+    if (v is String) return v.isEmpty ? null : v;
+    if (v is Map) {
+      final id = v['_id'] ?? v['id'] ?? v['filename'] ?? v['name'] ?? v['title'] ?? v['message'];
+      if (id != null) return id.toString();
+      return null;
+    }
+    if (v is List) return null;
+    return v.toString();
+  }
+
   factory ValidationIssueModel.fromJson(Map<String, dynamic> json) {
     return ValidationIssueModel(
-      id: json['_id'] as String? ?? json['id'] as String? ?? '',
-      documentId: json['documentId'] as String? ?? '',
-      recordId: json['recordId'] as String?,
-      type: json['type'] as String? ?? 'invalid_value',
-      severity: json['severity'] as String? ?? 'warning',
-      field: json['field'] as String?,
-      message: json['message'] as String? ?? '',
-      status: json['status'] as String? ?? 'open',
-      resolution: json['resolution'] as String?,
-      correctedValue: json['correctedValue']?.toString(),
-      currentValue: json['currentValue']?.toString(),
-      suggestedValue: json['suggestedValue']?.toString(),
-      notes: json['notes'] as String?,
-      resolvedAt: json['resolvedAt'] as String?,
-      resolvedBy: json['resolvedBy'] as String?,
+      id: safeStr(json['_id']) ?? safeStr(json['id']) ?? '',
+      documentId: safeStr(json['documentId']) ?? '',
+      recordId: safeStr(json['recordId']),
+      type: safeStr(json['type']) ?? 'invalid_value',
+      severity: safeStr(json['severity']) ?? 'warning',
+      field: safeStr(json['field']),
+      message: safeStr(json['message']) ?? '',
+      status: safeStr(json['status']) ?? 'open',
+      resolution: safeStr(json['resolution']),
+      correctedValue: safeStr(json['correctedValue']),
+      currentValue: safeStr(json['currentValue']),
+      suggestedValue: safeStr(json['suggestedValue']),
+      notes: safeStr(json['notes']),
+      resolvedAt: safeStr(json['resolvedAt']),
+      resolvedBy: safeStr(json['resolvedBy']),
     );
   }
 
@@ -149,34 +162,53 @@ class ValidationSummaryModel {
   });
 
   factory ValidationSummaryModel.fromJson(Map<String, dynamic> json) {
-    final sev = json['bySeverity'] as Map<String, dynamic>?;
+    final sev = json['bySeverity'];
     final sevMap = <String, int>{};
-    if (sev != null) {
-      sev.forEach((k, v) => sevMap[k] = (v as num).toInt());
+    if (sev is Map) {
+      sev.forEach((k, v) => sevMap[k.toString()] = num.tryParse(v?.toString() ?? '')?.toInt() ?? 0);
     }
 
-    final types = json['byType'] as Map<String, dynamic>?;
+    final types = json['byType'];
     final typeMap = <String, int>{};
-    if (types != null) {
-      types.forEach((k, v) => typeMap[k] = (v as num).toInt());
+    if (types is Map) {
+      types.forEach((k, v) => typeMap[k.toString()] = num.tryParse(v?.toString() ?? '')?.toInt() ?? 0);
+    }
+
+    final docMap = json['documentId'] is Map ? json['documentId'] as Map : null;
+    final docId = ValidationIssueModel.safeStr(json['documentId']) ??
+        ValidationIssueModel.safeStr(json['id']) ??
+        ValidationIssueModel.safeStr(json['_id']) ??
+        '';
+    final docName = ValidationIssueModel.safeStr(json['documentName']) ??
+        (docMap != null ? ValidationIssueModel.safeStr(docMap['filename'] ?? docMap['name']) : null);
+    final docStatus = ValidationIssueModel.safeStr(json['documentStatus']) ??
+        (docMap != null ? ValidationIssueModel.safeStr(docMap['status']) : null);
+
+    final rawIssues = json['issues'] ?? json['data'] ?? json['results'];
+    final List<ValidationIssueModel> issuesList = [];
+    if (rawIssues is List) {
+      for (final item in rawIssues) {
+        if (item is Map<String, dynamic>) {
+          issuesList.add(ValidationIssueModel.fromJson(item));
+        } else if (item is Map) {
+          issuesList.add(ValidationIssueModel.fromJson(Map<String, dynamic>.from(item)));
+        }
+      }
     }
 
     return ValidationSummaryModel(
-      documentId: json['documentId'] as String? ?? '',
-      documentName: json['documentName'] as String?,
-      documentStatus: json['documentStatus'] as String?,
-      qualityScore: (json['qualityScore'] as num?)?.toInt() ?? 100,
-      avgConfidence: (json['avgConfidence'] as num?)?.toDouble() ?? 1.0,
-      totalIssues: (json['totalIssues'] as num?)?.toInt() ?? 0,
-      openIssues: (json['openIssues'] as num?)?.toInt() ?? 0,
-      resolvedIssues: (json['resolvedIssues'] as num?)?.toInt() ?? 0,
-      recordsCount: (json['recordsCount'] as num?)?.toInt() ?? 0,
+      documentId: docId,
+      documentName: docName,
+      documentStatus: docStatus,
+      qualityScore: num.tryParse(json['qualityScore']?.toString() ?? '')?.toInt() ?? 100,
+      avgConfidence: double.tryParse(json['avgConfidence']?.toString() ?? '') ?? 1.0,
+      totalIssues: num.tryParse(json['totalIssues']?.toString() ?? '')?.toInt() ?? issuesList.length,
+      openIssues: num.tryParse(json['openIssues']?.toString() ?? '')?.toInt() ?? issuesList.where((i) => i.isOpen).length,
+      resolvedIssues: num.tryParse(json['resolvedIssues']?.toString() ?? '')?.toInt() ?? issuesList.where((i) => i.isResolved).length,
+      recordsCount: num.tryParse(json['recordsCount']?.toString() ?? '')?.toInt() ?? 0,
       bySeverity: sevMap,
       byType: typeMap,
-      issues: (json['issues'] as List<dynamic>?)
-              ?.map((i) => ValidationIssueModel.fromJson(i as Map<String, dynamic>))
-              .toList() ??
-          [],
+      issues: issuesList,
     );
   }
 
@@ -299,24 +331,24 @@ class ValidationPaginationMeta {
   });
 
   factory ValidationPaginationMeta.fromJson(Map<String, dynamic> json) {
-    final sev = json['bySeverity'] as Map<String, dynamic>?;
+    final sev = json['bySeverity'];
     final sevMap = <String, int>{};
-    if (sev != null) {
-      sev.forEach((k, v) => sevMap[k] = (v as num).toInt());
+    if (sev is Map) {
+      sev.forEach((k, v) => sevMap[k.toString()] = num.tryParse(v?.toString() ?? '')?.toInt() ?? 0);
     }
 
-    final types = json['byType'] as Map<String, dynamic>?;
+    final types = json['byType'];
     final typeMap = <String, int>{};
-    if (types != null) {
-      types.forEach((k, v) => typeMap[k] = (v as num).toInt());
+    if (types is Map) {
+      types.forEach((k, v) => typeMap[k.toString()] = num.tryParse(v?.toString() ?? '')?.toInt() ?? 0);
     }
 
     return ValidationPaginationMeta(
-      total: (json['total'] as num?)?.toInt() ?? 0,
-      page: (json['page'] as num?)?.toInt() ?? 1,
-      limit: (json['limit'] as num?)?.toInt() ?? 50,
-      pages: (json['pages'] as num?)?.toInt() ?? 1,
-      qualityScore: (json['qualityScore'] as num?)?.toInt() ?? 100,
+      total: num.tryParse(json['total']?.toString() ?? '')?.toInt() ?? 0,
+      page: num.tryParse(json['page']?.toString() ?? '')?.toInt() ?? 1,
+      limit: num.tryParse(json['limit']?.toString() ?? '')?.toInt() ?? 50,
+      pages: num.tryParse(json['pages']?.toString() ?? json['totalPages']?.toString() ?? '')?.toInt() ?? 1,
+      qualityScore: num.tryParse(json['qualityScore']?.toString() ?? '')?.toInt() ?? 100,
       bySeverity: sevMap,
       byType: typeMap,
     );
@@ -344,15 +376,38 @@ class ValidationIssuesResponse {
   });
 
   factory ValidationIssuesResponse.fromJson(Map<String, dynamic> json) {
-    final list = (json['data'] as List<dynamic>?)
-            ?.map((e) => ValidationIssueModel.fromJson(e as Map<String, dynamic>))
-            .toList() ??
-        [];
-    final metaData = json['meta'] as Map<String, dynamic>? ??
-        {'total': list.length, 'page': 1, 'limit': 50, 'pages': 1};
+    dynamic rawList;
+    Map<String, dynamic>? metaData;
+
+    if (json['data'] is List) {
+      rawList = json['data'];
+      if (json['meta'] is Map<String, dynamic>) {
+        metaData = json['meta'] as Map<String, dynamic>;
+      }
+    } else if (json['data'] is Map) {
+      final inner = json['data'] as Map<String, dynamic>;
+      rawList = inner['issues'] ?? inner['data'] ?? inner['results'];
+      metaData = inner['meta'] as Map<String, dynamic>? ?? inner['pagination'] as Map<String, dynamic>?;
+    } else if (json['issues'] is List) {
+      rawList = json['issues'];
+      metaData = json['meta'] as Map<String, dynamic>?;
+    }
+
+    final issues = <ValidationIssueModel>[];
+    if (rawList is List) {
+      for (final item in rawList) {
+        if (item is Map<String, dynamic>) {
+          issues.add(ValidationIssueModel.fromJson(item));
+        } else if (item is Map) {
+          issues.add(ValidationIssueModel.fromJson(Map<String, dynamic>.from(item)));
+        }
+      }
+    }
+
+    metaData ??= {'total': issues.length, 'page': 1, 'limit': 50, 'pages': 1};
 
     return ValidationIssuesResponse(
-      issues: list,
+      issues: issues,
       meta: ValidationPaginationMeta.fromJson(metaData),
     );
   }
@@ -377,14 +432,18 @@ class ValidationApprovalResponse {
   });
 
   factory ValidationApprovalResponse.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] as Map<String, dynamic>? ?? json;
+    final data = json['data'] is Map<String, dynamic> ? json['data'] as Map<String, dynamic> : json;
+    final docMap = data['documentId'] is Map ? data['documentId'] as Map : null;
     return ValidationApprovalResponse(
-      documentId: data['documentId'] as String? ?? '',
-      documentName: data['documentName'] as String?,
-      status: data['status'] as String? ?? 'approved',
-      approvedBy: data['approvedBy'] as String? ?? 'admin',
-      approvedAt: data['approvedAt'] as String? ?? '',
-      recordsApproved: (data['recordsApproved'] as num?)?.toInt() ?? 0,
+      documentId: ValidationIssueModel.safeStr(data['documentId']) ??
+          (docMap != null ? ValidationIssueModel.safeStr(docMap['_id'] ?? docMap['id']) : null) ??
+          '',
+      documentName: ValidationIssueModel.safeStr(data['documentName']) ??
+          (docMap != null ? ValidationIssueModel.safeStr(docMap['filename'] ?? docMap['name']) : null),
+      status: ValidationIssueModel.safeStr(data['status']) ?? 'approved',
+      approvedBy: ValidationIssueModel.safeStr(data['approvedBy']) ?? 'admin',
+      approvedAt: ValidationIssueModel.safeStr(data['approvedAt']) ?? '',
+      recordsApproved: num.tryParse(data['recordsApproved']?.toString() ?? '')?.toInt() ?? 0,
     );
   }
 
@@ -460,13 +519,17 @@ class ValidationReviewResponse {
   });
 
   factory ValidationReviewResponse.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] as Map<String, dynamic>? ?? json;
+    final data = json['data'] is Map<String, dynamic> ? json['data'] as Map<String, dynamic> : json;
+    final docMap = data['documentId'] is Map ? data['documentId'] as Map : null;
     return ValidationReviewResponse(
-      documentId: data['documentId'] as String? ?? '',
-      documentName: data['documentName'] as String?,
-      status: data['status'] as String? ?? 'in_review',
-      decision: data['decision'] as String? ?? 'approved',
-      comments: data['comments'] as String?,
+      documentId: ValidationIssueModel.safeStr(data['documentId']) ??
+          (docMap != null ? ValidationIssueModel.safeStr(docMap['_id'] ?? docMap['id']) : null) ??
+          '',
+      documentName: ValidationIssueModel.safeStr(data['documentName']) ??
+          (docMap != null ? ValidationIssueModel.safeStr(docMap['filename'] ?? docMap['name']) : null),
+      status: ValidationIssueModel.safeStr(data['status']) ?? 'in_review',
+      decision: ValidationIssueModel.safeStr(data['decision']) ?? 'approved',
+      comments: ValidationIssueModel.safeStr(data['comments']),
     );
   }
 

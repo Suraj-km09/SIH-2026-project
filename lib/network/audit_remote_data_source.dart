@@ -25,9 +25,17 @@ class AuditRemoteDataSource {
     if (limit != null) queryParams['limit'] = limit;
     if (page != null) queryParams['page'] = page;
     if (skip != null) queryParams['skip'] = skip;
-    if (action != null && action.isNotEmpty) queryParams['action'] = action;
-    if (status != null && status.isNotEmpty) queryParams['status'] = status;
-    if (resource != null && resource.isNotEmpty) queryParams['resource'] = resource;
+    if (action != null && action.isNotEmpty && action.toUpperCase() != 'ALL') {
+      queryParams['action'] = action;
+    }
+    if (status != null && status.isNotEmpty && status.toUpperCase() != 'ALL') {
+      queryParams['status'] = status;
+    }
+    if (resource != null &&
+        resource.isNotEmpty &&
+        resource.toUpperCase() != 'ALL') {
+      queryParams['resource'] = resource;
+    }
     if (search != null && search.isNotEmpty) queryParams['search'] = search;
     if (startDate != null && startDate.isNotEmpty) queryParams['startDate'] = startDate;
     if (endDate != null && endDate.isNotEmpty) queryParams['endDate'] = endDate;
@@ -37,14 +45,20 @@ class AuditRemoteDataSource {
       queryParameters: queryParams.isNotEmpty ? queryParams : null,
     );
 
-    return AuditLogsResponse.fromJson(response.data as Map<String, dynamic>);
+    final rawData = response.data is Map<String, dynamic>
+        ? response.data as Map<String, dynamic>
+        : Map<String, dynamic>.from(response.data as Map);
+    return AuditLogsResponse.fromJson(rawData);
   }
 
   /// GET /audit/stats
   Future<AuditStats> getStats() async {
     final response = await _apiClient.dio.get(ApiEndpoints.auditStats);
     final rawData = response.data['data'] ?? response.data;
-    return AuditStats.fromJson(rawData as Map<String, dynamic>);
+    final mapData = rawData is Map<String, dynamic>
+        ? rawData
+        : Map<String, dynamic>.from(rawData as Map);
+    return AuditStats.fromJson(mapData);
   }
 
   /// GET /audit/export
@@ -55,9 +69,17 @@ class AuditRemoteDataSource {
     String? status,
   }) async {
     final queryParams = <String, dynamic>{'format': format};
-    if (action != null && action.isNotEmpty) queryParams['action'] = action;
-    if (resource != null && resource.isNotEmpty) queryParams['resource'] = resource;
-    if (status != null && status.isNotEmpty) queryParams['status'] = status;
+    if (action != null && action.isNotEmpty && action.toUpperCase() != 'ALL') {
+      queryParams['action'] = action;
+    }
+    if (resource != null &&
+        resource.isNotEmpty &&
+        resource.toUpperCase() != 'ALL') {
+      queryParams['resource'] = resource;
+    }
+    if (status != null && status.isNotEmpty && status.toUpperCase() != 'ALL') {
+      queryParams['status'] = status;
+    }
 
     final response = await _apiClient.dio.get<String>(
       ApiEndpoints.auditExport,
@@ -77,8 +99,8 @@ class AuditRemoteDataSource {
     final rawData = response.data['data'] ?? response.data;
     if (rawData is List) {
       return rawData
-          .whereType<Map<String, dynamic>>()
-          .map(AuditLogEntry.fromJson)
+          .whereType<Map>()
+          .map((e) => AuditLogEntry.fromJson(Map<String, dynamic>.from(e)))
           .toList();
     }
     return [];
@@ -91,8 +113,8 @@ class AuditRemoteDataSource {
     final rawData = response.data['data'] ?? response.data;
     if (rawData is List) {
       return rawData
-          .whereType<Map<String, dynamic>>()
-          .map(AuditLogEntry.fromJson)
+          .whereType<Map>()
+          .map((e) => AuditLogEntry.fromJson(Map<String, dynamic>.from(e)))
           .toList();
     }
     return [];
@@ -105,8 +127,8 @@ class AuditRemoteDataSource {
     final rawData = response.data['data'] ?? response.data;
     if (rawData is List) {
       return rawData
-          .whereType<Map<String, dynamic>>()
-          .map(AuditLogEntry.fromJson)
+          .whereType<Map>()
+          .map((e) => AuditLogEntry.fromJson(Map<String, dynamic>.from(e)))
           .toList();
     }
     return [];
@@ -116,6 +138,9 @@ class AuditRemoteDataSource {
   Future<AuditLogEntry> getAuditDetail(String id) async {
     final response = await _apiClient.dio.get(ApiEndpoints.auditDetail(id));
     final rawData = response.data['data'] ?? response.data;
-    return AuditLogEntry.fromJson(rawData as Map<String, dynamic>);
+    final mapData = rawData is Map<String, dynamic>
+        ? rawData
+        : Map<String, dynamic>.from(rawData as Map);
+    return AuditLogEntry.fromJson(mapData);
   }
 }

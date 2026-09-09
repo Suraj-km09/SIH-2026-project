@@ -120,5 +120,45 @@ void main() {
 
       expect(info.isInfo, isTrue);
     });
+
+    test('DashboardActivityModel parses live /dashboard/activity feed format', () {
+      final json = {
+        'id': '6aa03f844e657cf0fc5a1c7a',
+        'type': 'ADMIN_LOGIN',
+        'title': 'ADMIN_LOGIN on Auth',
+        'description': 'Action performed by vishal (SUCCESS)',
+        'status': 'completed',
+        'timestamp': '2026-09-08T17:01:56.186Z',
+        'user': 'vishal',
+      };
+
+      final activity = DashboardActivityModel.fromJson(json);
+      expect(activity.id, '6aa03f844e657cf0fc5a1c7a');
+      expect(activity.action, 'ADMIN_LOGIN');
+      expect(activity.resource, 'Auth');
+      expect(activity.user, 'vishal');
+      expect(activity.type, 'ADMIN_LOGIN');
+      expect(activity.description, 'Action performed by vishal (SUCCESS)');
+      expect(activity.status, 'completed');
+    });
+
+    test('DashboardOverviewModel.copyWith updates recentActivity properly', () {
+      const overview = DashboardOverviewModel(
+        stats: DashboardStatsModel(),
+        recentActivity: [],
+      );
+
+      const newAct = DashboardActivityModel(
+        id: '1',
+        action: 'APPROVE',
+        resource: 'Report',
+        timestamp: '2026-09-08',
+        user: 'admin',
+      );
+
+      final updated = overview.copyWith(recentActivity: [newAct]);
+      expect(updated.recentActivity.length, 1);
+      expect(updated.recentActivity.first.id, '1');
+    });
   });
 }

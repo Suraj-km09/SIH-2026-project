@@ -9,6 +9,7 @@ import '../../widgets/feedback/error_state.dart';
 import '../../widgets/feedback/loading_indicator.dart';
 import 'widgets/alerts_card.dart';
 import 'widgets/dashboard_kpi_grid.dart';
+import 'widgets/dashboard_throughput_chart_card.dart';
 import 'widgets/quality_highlight_card.dart';
 import 'widgets/recent_activity_card.dart';
 import 'widgets/recent_documents_card.dart';
@@ -41,7 +42,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // Error State (when no prior data exists)
     if (state.isError && (state.overview == null || state.kpis == null)) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         body: ErrorStateWidget(
           title: 'Unable to Load Dashboard',
           message: state.errorMessage ?? 'Failed to connect to MineIntel API.',
@@ -52,9 +53,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     // Initial or Loading State (when no data exists yet)
     if (state.overview == null || state.kpis == null) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: AppLoadingIndicator(
+      return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+        body: const AppLoadingIndicator(
           message: 'Loading executive mining intelligence dashboard...',
         ),
       );
@@ -63,7 +64,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // Empty State
     if (state.isEmpty) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         body: EmptyStateWidget(
           icon: Icons.dashboard_outlined,
           title: 'No Operational Data',
@@ -79,7 +80,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final kpis = state.kpis!;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       body: RefreshIndicator(
         onRefresh: () => ref.read(dashboardNotifierProvider.notifier).refresh(),
         color: AppColors.primary,
@@ -122,6 +123,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
               // Responsive KPI Cards Grid
               DashboardKpiGrid(overview: overview, kpis: kpis),
+              const SizedBox(height: 24),
+
+              // Operational Throughput & Ingestion Trajectory Chart
+              const DashboardThroughputChartCard(),
               const SizedBox(height: 24),
 
               // Responsive Multi-Section Layout

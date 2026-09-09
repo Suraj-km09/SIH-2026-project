@@ -85,7 +85,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       body: SafeArea(
         child: Column(
           children: [
@@ -188,8 +188,8 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: isCompact ? 16 : 20, vertical: 12),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
         border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
       ),
       child: isCompact
@@ -262,7 +262,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
@@ -455,7 +455,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
@@ -511,7 +511,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceMuted,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text('v${r.version}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
@@ -552,7 +552,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
                           if (val == 'delete') {
                             notifier.deleteReport(r.id);
                           } else {
-                            notifier.exportReport(r.id, val);
+                            notifier.exportReport(r.id, val, reportTitle: r.title);
                           }
                         },
                         itemBuilder: (context) => [
@@ -589,7 +589,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.border),
           ),
@@ -634,7 +634,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceMuted,
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: AppColors.border),
                       ),
@@ -646,7 +646,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
                         ],
                       ),
                     ),
-                    onSelected: (fmt) => notifier.exportReport(r.id, fmt),
+                    onSelected: (fmt) => notifier.exportReport(r.id, fmt, reportTitle: r.title),
                     itemBuilder: (context) => const [
                       PopupMenuItem(value: 'pdf', child: Text('PDF Document')),
                       PopupMenuItem(value: 'docx', child: Text('Word (.docx)')),
@@ -682,7 +682,7 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),

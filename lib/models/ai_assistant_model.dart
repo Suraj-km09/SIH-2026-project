@@ -156,15 +156,15 @@ class AiAssistantResponse {
       answer: data['answer'] as String? ?? data['response'] as String? ?? '',
       confidence: (data['confidence'] as num?)?.toDouble() ?? 0.85,
       citations: citationsRaw
-          .whereType<Map<String, dynamic>>()
-          .map(AiCitationModel.fromJson)
+          .whereType<Map>()
+          .map((e) => AiCitationModel.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
       evidence: evidenceRaw
-          .whereType<Map<String, dynamic>>()
-          .map(AiEvidenceModel.fromJson)
+          .whereType<Map>()
+          .map((e) => AiEvidenceModel.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
-      calculation: data['calculation'] is Map<String, dynamic>
-          ? AiCalculationModel.fromJson(data['calculation'] as Map<String, dynamic>)
+      calculation: data['calculation'] is Map
+          ? AiCalculationModel.fromJson(Map<String, dynamic>.from(data['calculation'] as Map))
           : null,
       insufficientEvidence: data['insufficientEvidence'] as bool? ?? false,
       conversationId: data['conversationId']?.toString() ?? data['id']?.toString(),
@@ -228,15 +228,15 @@ class ChatMessageModel {
       timestamp: time,
       confidence: (json['confidence'] as num?)?.toDouble(),
       citations: citationsRaw
-          .whereType<Map<String, dynamic>>()
-          .map(AiCitationModel.fromJson)
+          .whereType<Map>()
+          .map((e) => AiCitationModel.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
       evidence: evidenceRaw
-          .whereType<Map<String, dynamic>>()
-          .map(AiEvidenceModel.fromJson)
+          .whereType<Map>()
+          .map((e) => AiEvidenceModel.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
-      calculation: json['calculation'] is Map<String, dynamic>
-          ? AiCalculationModel.fromJson(json['calculation'] as Map<String, dynamic>)
+      calculation: json['calculation'] is Map
+          ? AiCalculationModel.fromJson(Map<String, dynamic>.from(json['calculation'] as Map))
           : null,
       insufficientEvidence: json['insufficientEvidence'] as bool? ?? false,
     );
@@ -275,17 +275,20 @@ class ConversationThreadModel {
   });
 
   factory ConversationThreadModel.fromJson(Map<String, dynamic> json) {
-    final messagesRaw = json['messages'] as List<dynamic>? ?? [];
+    final data = json['data'] is Map
+        ? Map<String, dynamic>.from(json['data'] as Map)
+        : json;
+    final messagesRaw = data['messages'] as List<dynamic>? ?? [];
 
     return ConversationThreadModel(
-      id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
-      title: json['title'] as String? ?? 'Mining Intelligence Session',
-      messageCount: (json['messageCount'] as num?)?.toInt() ?? messagesRaw.length,
-      createdAt: json['createdAt']?.toString(),
-      updatedAt: json['updatedAt']?.toString(),
+      id: data['id']?.toString() ?? data['_id']?.toString() ?? '',
+      title: data['title'] as String? ?? 'Mining Intelligence Session',
+      messageCount: (data['messageCount'] as num?)?.toInt() ?? messagesRaw.length,
+      createdAt: data['createdAt']?.toString(),
+      updatedAt: data['updatedAt']?.toString(),
       messages: messagesRaw
-          .whereType<Map<String, dynamic>>()
-          .map(ChatMessageModel.fromJson)
+          .whereType<Map>()
+          .map((e) => ChatMessageModel.fromJson(Map<String, dynamic>.from(e)))
           .toList(),
     );
   }

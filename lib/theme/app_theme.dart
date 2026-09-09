@@ -19,20 +19,28 @@ class AppTheme {
         onPrimary: AppColors.textInverse,
         secondary: AppColors.accentTeal,
         onSecondary: AppColors.textInverse,
+        // surface = AppBar / Sidebar color (white)
         surface: AppColors.surface,
+        // surfaceContainerHighest = distinct app body background
+        surfaceContainerHighest: AppColors.background,
         onSurface: AppColors.textPrimary,
         error: AppColors.error,
         onError: AppColors.textInverse,
       ),
 
-      // App Bar Theme
+      // App Bar Theme — white, clearly distinct from light-gray body
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textPrimary,
         elevation: 0,
-        scrolledUnderElevation: 0.5,
+        scrolledUnderElevation: 1,
+        shadowColor: AppColors.border,
         centerTitle: false,
         iconTheme: const IconThemeData(color: AppColors.textPrimary, size: 20),
-        titleTextStyle: AppTypography.headlineMedium,
+        titleTextStyle: AppTypography.headlineMedium.copyWith(
+          color: AppColors.textPrimary,
+          fontWeight: FontWeight.w700,
+        ),
       ),
 
       // Card Theme (Pure white, subtle 1px border, 14px radius, soft ambient shadow)
@@ -107,12 +115,19 @@ class AppTheme {
         backgroundColor: AppColors.surface,
         elevation: 0,
         height: 64,
-        indicatorColor: AppColors.surfaceMuted,
+        // Active indicator: primary color with low opacity — clearly visible highlight
+        indicatorColor: AppColors.primary.withValues(alpha: 0.12),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColors.primary, size: 22);
+          }
+          return const IconThemeData(color: AppColors.textSecondary, size: 22);
+        }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return AppTypography.labelSmall.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
             );
           }
           return AppTypography.labelSmall.copyWith(
@@ -125,9 +140,11 @@ class AppTheme {
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        indicatorColor: AppColors.surfaceMuted,
+        indicatorColor: AppColors.primary.withValues(alpha: 0.10),
+        selectedIconTheme: const IconThemeData(color: AppColors.primary, size: 20),
+        unselectedIconTheme: const IconThemeData(color: AppColors.textSecondary, size: 20),
         selectedLabelTextStyle: AppTypography.labelSmall.copyWith(
-          color: AppColors.textPrimary,
+          color: AppColors.primary,
           fontWeight: FontWeight.w600,
         ),
         unselectedLabelTextStyle: AppTypography.labelSmall.copyWith(
@@ -149,23 +166,29 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       primaryColor: AppColors.textInverse,
+      // Body / scaffold = deep near-black
       scaffoldBackgroundColor: AppColors.heroSurface,
       colorScheme: const ColorScheme.dark(
         primary: AppColors.textInverse,
         onPrimary: AppColors.primary,
         secondary: AppColors.accentTeal,
         onSecondary: AppColors.textInverse,
+        // surface = AppBar / Sidebar color (dark slate, noticeably lighter than body)
         surface: AppColors.heroSurfaceLight,
+        // surfaceContainerHighest = distinct app body background
+        surfaceContainerHighest: AppColors.heroSurface,
         onSurface: AppColors.textInverse,
         error: AppColors.error,
         onError: AppColors.textInverse,
       ),
 
-      // App Bar Theme
+      // App Bar Theme — dark slate, clearly distinct from near-black body
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.heroSurfaceLight,
+        foregroundColor: AppColors.textInverse,
         elevation: 0,
-        scrolledUnderElevation: 0.5,
+        scrolledUnderElevation: 1,
+        shadowColor: const Color(0xFF000000),
         centerTitle: false,
         iconTheme: const IconThemeData(color: AppColors.textInverse, size: 20),
         titleTextStyle: AppTypography.headlineMedium.copyWith(color: AppColors.textInverse),
@@ -243,12 +266,19 @@ class AppTheme {
         backgroundColor: AppColors.heroSurfaceLight,
         elevation: 0,
         height: 64,
-        indicatorColor: const Color(0xFF374151),
+        // Active indicator: bright teal accent — stands out clearly on dark bg
+        indicatorColor: AppColors.accentTeal.withValues(alpha: 0.25),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColors.accentTeal, size: 22);
+          }
+          return const IconThemeData(color: AppColors.textTertiary, size: 22);
+        }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return AppTypography.labelSmall.copyWith(
-              color: AppColors.textInverse,
-              fontWeight: FontWeight.w600,
+              color: AppColors.accentTeal,
+              fontWeight: FontWeight.w700,
             );
           }
           return AppTypography.labelSmall.copyWith(
@@ -261,9 +291,11 @@ class AppTheme {
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: AppColors.heroSurfaceLight,
         elevation: 0,
-        indicatorColor: const Color(0xFF374151),
+        indicatorColor: AppColors.accentTeal.withValues(alpha: 0.20),
+        selectedIconTheme: const IconThemeData(color: AppColors.accentTeal, size: 20),
+        unselectedIconTheme: const IconThemeData(color: AppColors.textTertiary, size: 20),
         selectedLabelTextStyle: AppTypography.labelSmall.copyWith(
-          color: AppColors.textInverse,
+          color: AppColors.accentTeal,
           fontWeight: FontWeight.w600,
         ),
         unselectedLabelTextStyle: AppTypography.labelSmall.copyWith(

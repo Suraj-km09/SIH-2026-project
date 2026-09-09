@@ -84,22 +84,26 @@ class TopicAnalysisResult {
 class TopicTrendPeriod {
   final String period;
   final int count;
+  final double avgWeight;
 
   const TopicTrendPeriod({
     required this.period,
     required this.count,
+    this.avgWeight = 0.0,
   });
 
   factory TopicTrendPeriod.fromJson(Map<String, dynamic> json) {
     return TopicTrendPeriod(
       period: json['period'] as String? ?? '',
       count: (json['count'] as num?)?.toInt() ?? 0,
+      avgWeight: (json['avgWeight'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
   Map<String, dynamic> toJson() => {
         'period': period,
         'count': count,
+        'avgWeight': avgWeight,
       };
 }
 
@@ -117,7 +121,8 @@ class TopicTrend {
   });
 
   factory TopicTrend.fromJson(Map<String, dynamic> json) {
-    final pList = (json['periods'] as List<dynamic>?)
+    final rawList = json['trends'] ?? json['periods'];
+    final pList = (rawList as List<dynamic>?)
             ?.map((e) => TopicTrendPeriod.fromJson(e as Map<String, dynamic>))
             .toList() ??
         [];
@@ -160,7 +165,7 @@ class TopicCluster {
             .toList() ??
         [];
     final relList = (json['relatedTopics'] as List<dynamic>?)
-            ?.map((e) => RelatedTopicItem.fromJson(e as Map<String, dynamic>))
+            ?.map((e) => RelatedTopicItem.fromJson(e))
             .toList() ??
         [];
 
@@ -169,7 +174,9 @@ class TopicCluster {
       name: json['name'] as String? ?? 'Cluster',
       weight: (json['weight'] as num?)?.toDouble() ?? 0.5,
       keywords: kwList,
-      documentsCount: (json['documentsCount'] as num?)?.toInt() ?? 0,
+      documentsCount: (json['documentCount'] as num?)?.toInt() ??
+          (json['documentsCount'] as num?)?.toInt() ??
+          0,
       relatedTopics: relList,
     );
   }

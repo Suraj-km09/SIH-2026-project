@@ -39,8 +39,8 @@ class _IntelligenceTopicsScreenState extends State<IntelligenceTopicsScreen> {
         Container(
           width: double.infinity,
           padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 24, vertical: 8),
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
             border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
           ),
           child: SingleChildScrollView(

@@ -59,7 +59,7 @@ class _GisMapScreenState extends ConsumerState<GisMapScreen> {
     final gisState = ref.watch(gisNotifierProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       body: Column(
         children: [
           _buildHeader(gisState),
@@ -74,8 +74,8 @@ class _GisMapScreenState extends ConsumerState<GisMapScreen> {
   Widget _buildHeader(GisState state) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
         border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
       ),
       child: ResponsiveBuilder(
@@ -229,8 +229,8 @@ class _GisMapScreenState extends ConsumerState<GisMapScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
         border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
       ),
       child: SingleChildScrollView(
@@ -310,7 +310,7 @@ class _GisMapScreenState extends ConsumerState<GisMapScreen> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      color: AppColors.surface,
+      color: Theme.of(context).colorScheme.surface,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
@@ -414,7 +414,7 @@ class _GisMapScreenState extends ConsumerState<GisMapScreen> {
           top: 16,
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: AppColors.border),
               boxShadow: [
@@ -534,7 +534,7 @@ class _GisMapScreenState extends ConsumerState<GisMapScreen> {
 
   Widget _buildSelectedLocationInspector(GisDocumentRecord record) {
     return Container(
-      color: AppColors.surface,
+      color: Theme.of(context).colorScheme.surface,
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

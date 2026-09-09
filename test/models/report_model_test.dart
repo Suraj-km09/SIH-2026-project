@@ -105,5 +105,96 @@ void main() {
       expect(reviewItem.confidenceScore, 0.92);
       expect(reviewItem.evidenceCount, 4);
     });
+
+    test('ReportModel handles populated Map generatedBy and status completed', () {
+      final json = {
+        '_id': 'rep_backend_live',
+        'title': 'Live Backend Report',
+        'type': 'comprehensive',
+        'status': 'completed',
+        'generatedBy': {
+          '_id': 'user_6a88e',
+          'username': 'Abhi',
+        },
+        'approvedBy': {
+          '_id': 'user_admin',
+          'username': 'vishal',
+        },
+        'content': {
+          'markdown': '# MineIntel Operations Analysis Report\n## Executive Summary',
+          'sources': [
+            {
+              '_id': 'doc_test_1',
+              'originalName': 'validation_test_bad_data.pdf',
+              'filename': '1787928884020-hash.pdf',
+            }
+          ]
+        }
+      };
+
+      final report = ReportModel.fromJson(json);
+      expect(report.id, 'rep_backend_live');
+      expect(report.isApproved, isTrue);
+      expect(report.isCompleted, isTrue);
+      expect(report.generatedBy, 'Abhi');
+      expect(report.approvedBy, 'vishal');
+      expect(report.sources.length, 1);
+      expect(report.sources.first.originalName, 'validation_test_bad_data.pdf');
+      expect(report.contentAsString, contains('# MineIntel Operations Analysis Report'));
+    });
+
+    test('ReportGenerateRequest serializes period, mine, and instructions', () {
+      const request = ReportGenerateRequest(
+        type: 'production_summary',
+        title: 'Monthly Statutory Summary',
+        documentIds: ['doc_123'],
+        language: 'hi',
+        period: 'Q1 FY2024-25',
+        mine: 'Jayant OCP / NCL',
+        instructions: 'Focus on stripping ratio variance',
+      );
+
+      final map = request.toJson();
+      expect(map['type'], 'production_summary');
+      expect(map['title'], 'Monthly Statutory Summary');
+      expect(map['language'], 'hi');
+      expect(map['period'], 'Q1 FY2024-25');
+      expect(map['mine'], 'Jayant OCP / NCL');
+      expect(map['instructions'], 'Focus on stripping ratio variance');
+    });
+
+    test('ReviewItemModel parses live backend review items with Map generatedBy', () {
+      final json = {
+        '_id': '6a9c31c5021cfa0019573510',
+        'title': 'Quarterly Production & Statutory Compliance Review - Q3 FY2024',
+        'type': 'compliance_audit',
+        'content': {
+          'summary': 'Live review test',
+          'sources': [
+            {
+              'documentId': '6a91a1342c171625d7dd5d9a',
+              'documentName': 'validation_test_bad_data.pdf',
+            }
+          ]
+        },
+        'status': 'review',
+        'generatedBy': {
+          '_id': '6a92b652529ffc2a9bab28bb',
+          'username': 'Rohit',
+        },
+        'reviewerComments': '',
+        'confidenceScore': 0.65,
+        'createdAt': '2026-09-05T07:17:12.839Z',
+      };
+
+      final item = ReviewItemModel.fromJson(json);
+      expect(item.id, '6a9c31c5021cfa0019573510');
+      expect(item.title, 'Quarterly Production & Statutory Compliance Review - Q3 FY2024');
+      expect(item.submittedBy, 'Rohit');
+      expect(item.confidenceScore, 0.65);
+      expect(item.evidenceCount, 1);
+      expect(item.report, isNotNull);
+      expect(item.report!.id, '6a9c31c5021cfa0019573510');
+    });
   });
 }

@@ -15,17 +15,20 @@ class AiAssistantRemoteDataSource {
       ApiEndpoints.aiAssistantQuery,
       data: request.toJson(),
     );
-    return AiAssistantResponse.fromJson(response.data as Map<String, dynamic>);
+    final data = response.data is Map ? response.data as Map : {};
+    return AiAssistantResponse.fromJson(Map<String, dynamic>.from(data));
   }
 
   /// GET /api/v1/ai-assistant/history
   Future<List<ConversationThreadModel>> getHistory() async {
     final response = await _apiClient.dio.get(ApiEndpoints.aiAssistantHistory);
-    final rawData = response.data['data'] ?? response.data;
+    final rawData = response.data is Map
+        ? (response.data['data'] ?? response.data)
+        : response.data;
     if (rawData is List) {
       return rawData
-          .whereType<Map<String, dynamic>>()
-          .map(ConversationThreadModel.fromJson)
+          .whereType<Map>()
+          .map((e) => ConversationThreadModel.fromJson(Map<String, dynamic>.from(e)))
           .toList();
     }
     return [];
@@ -34,13 +37,17 @@ class AiAssistantRemoteDataSource {
   /// GET /api/v1/ai-assistant/history/:id
   Future<ConversationThreadModel> getConversationById(String id) async {
     final response = await _apiClient.dio.get(ApiEndpoints.aiAssistantHistoryDetail(id));
-    final rawData = response.data['data'] ?? response.data;
-    return ConversationThreadModel.fromJson(rawData as Map<String, dynamic>);
+    final rawData = response.data is Map
+        ? (response.data['data'] ?? response.data)
+        : response.data;
+    return ConversationThreadModel.fromJson(
+        Map<String, dynamic>.from(rawData is Map ? rawData : {}));
   }
 
   /// DELETE /api/v1/ai-assistant/history/:id
   Future<bool> deleteConversation(String id) async {
     final response = await _apiClient.dio.delete(ApiEndpoints.aiAssistantHistoryDelete(id));
-    return response.statusCode == 200 || response.data['success'] == true;
+    return response.statusCode == 200 ||
+        (response.data is Map && response.data['success'] == true);
   }
 }

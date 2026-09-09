@@ -2,8 +2,9 @@
 abstract class Failure {
   final String message;
   final String? code;
+  final String? errorTitle;
 
-  const Failure(this.message, {this.code});
+  const Failure(this.message, {this.code, this.errorTitle});
 
   @override
   String toString() => message;
@@ -11,27 +12,41 @@ abstract class Failure {
 
 class NetworkFailure extends Failure {
   const NetworkFailure([super.message = 'Unable to connect to MineIntel AI server. Check your connection.'])
-      : super(code: 'NETWORK_FAILURE');
+      : super(code: 'NETWORK_FAILURE', errorTitle: 'Connection Error');
 }
 
 class AuthFailure extends Failure {
-  const AuthFailure([super.message = 'Authentication failed. Please verify your credentials.'])
-      : super(code: 'AUTH_FAILURE');
+  final bool isIncorrectPassword;
+  final bool isInvalidPassword;
+
+  const AuthFailure(
+    super.message, {
+    this.isIncorrectPassword = false,
+    this.isInvalidPassword = false,
+    super.code = 'AUTH_FAILURE',
+    super.errorTitle,
+  });
 }
 
 class SessionExpiredFailure extends Failure {
   const SessionExpiredFailure([super.message = 'Your session has expired. Please sign in again.'])
-      : super(code: 'SESSION_EXPIRED');
+      : super(code: 'SESSION_EXPIRED', errorTitle: 'Session Expired');
 }
 
 class PermissionFailure extends Failure {
-  const PermissionFailure([super.message = 'Access denied. You do not have permissions for this action.'])
-      : super(code: 'PERMISSION_DENIED');
+  final bool isAccountInactive;
+
+  const PermissionFailure(
+    super.message, {
+    this.isAccountInactive = false,
+    super.code = 'PERMISSION_DENIED',
+    super.errorTitle = 'Access Denied',
+  });
 }
 
 class NotFoundFailure extends Failure {
   const NotFoundFailure([super.message = 'The requested document or report was not found.'])
-      : super(code: 'NOT_FOUND');
+      : super(code: 'NOT_FOUND', errorTitle: 'Not Found');
 }
 
 class ConflictFailure extends Failure {
@@ -42,14 +57,24 @@ class ConflictFailure extends Failure {
     super.message, {
     this.isDuplicateDocument = false,
     this.isAgentConcurrency = false,
-  }) : super(code: 'CONFLICT');
+    super.code = 'CONFLICT',
+    super.errorTitle = 'Conflict',
+  });
 }
 
 class ValidationFailure extends Failure {
   final Map<String, dynamic>? errors;
+  final String? validationMessage;
+  final Map<String, String>? fieldErrors;
 
-  const ValidationFailure(super.message, {this.errors})
-      : super(code: 'VALIDATION_FAILED');
+  const ValidationFailure(
+    super.message, {
+    this.errors,
+    this.validationMessage,
+    this.fieldErrors,
+    super.code = 'VALIDATION_FAILED',
+    super.errorTitle = 'Validation Error',
+  });
 }
 
 class ServerFailure extends Failure {

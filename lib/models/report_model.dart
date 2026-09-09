@@ -38,10 +38,24 @@ class ReportModel {
     this.documentIds = const [],
   });
 
-  bool get isApproved => status == 'approved';
+  bool get isApproved => status == 'approved' || status == 'completed';
   bool get isReview => status == 'review';
   bool get isDraft => status == 'draft';
   bool get isRejected => status == 'rejected';
+  bool get isCompleted => status == 'completed';
+
+  List<ReportSourceDocument> get sources {
+    if (content is Map && (content as Map).containsKey('sources')) {
+      final rawList = (content as Map)['sources'];
+      if (rawList is List) {
+        return rawList
+            .whereType<Map<String, dynamic>>()
+            .map((e) => ReportSourceDocument.fromJson(e))
+            .toList();
+      }
+    }
+    return const [];
+  }
 
   String get contentAsString {
     if (content == null) return '';
@@ -56,29 +70,65 @@ class ReportModel {
     return content.toString();
   }
 
+  static String? _safeStr(dynamic v) {
+    if (v == null) return null;
+    if (v is String) return v.isEmpty ? null : v;
+    if (v is Map) {
+      final val = v['username'] ?? v['name'] ?? v['title'] ?? v['filename'] ?? v['_id'] ?? v['id'];
+      if (val != null) return val.toString();
+      return null;
+    }
+    if (v is List) return null;
+    return v.toString();
+  }
+
   factory ReportModel.fromJson(Map<String, dynamic> json) {
     final docList = (json['documentIds'] as List<dynamic>?)
             ?.map((e) => e.toString())
             .toList() ??
         [];
 
+    final genBy = json['generatedBy'];
+    String? generatedByStr;
+    if (genBy is String) {
+      generatedByStr = genBy;
+    } else if (genBy is Map) {
+      generatedByStr = _safeStr(genBy);
+    }
+
+    final appBy = json['approvedBy'];
+    String? approvedByStr;
+    if (appBy is String) {
+      approvedByStr = appBy;
+    } else if (appBy is Map) {
+      approvedByStr = _safeStr(appBy);
+    }
+
+    final revId = json['reviewerId'];
+    String? reviewerIdStr;
+    if (revId is String) {
+      reviewerIdStr = revId;
+    } else if (revId is Map) {
+      reviewerIdStr = _safeStr(revId);
+    }
+
     return ReportModel(
-      id: json['_id'] as String? ?? json['id'] as String? ?? '',
-      title: json['title'] as String? ?? 'Untitled Report',
-      type: json['type'] as String? ?? 'production_summary',
+      id: _safeStr(json['_id']) ?? _safeStr(json['id']) ?? '',
+      title: _safeStr(json['title']) ?? 'Untitled Report',
+      type: _safeStr(json['type']) ?? 'production_summary',
       content: json['content'],
-      status: json['status'] as String? ?? 'draft',
-      fileUrl: json['fileUrl'] as String?,
-      generatedBy: json['generatedBy'] as String?,
-      reviewerId: json['reviewerId'] as String?,
-      reviewerComments: json['reviewerComments'] as String?,
-      reviewedAt: json['reviewedAt'] as String?,
-      approvedBy: json['approvedBy'] as String?,
-      approvedAt: json['approvedAt'] as String?,
-      version: (json['version'] as num?)?.toInt() ?? 1,
-      confidenceScore: (json['confidenceScore'] as num?)?.toDouble(),
-      language: json['language'] as String? ?? 'en',
-      createdAt: json['createdAt'] as String?,
+      status: _safeStr(json['status']) ?? 'draft',
+      fileUrl: _safeStr(json['fileUrl']),
+      generatedBy: generatedByStr,
+      reviewerId: reviewerIdStr,
+      reviewerComments: _safeStr(json['reviewerComments']),
+      reviewedAt: _safeStr(json['reviewedAt']),
+      approvedBy: approvedByStr,
+      approvedAt: _safeStr(json['approvedAt']),
+      version: (json['version'] as num?)?.toInt() ?? num.tryParse(json['version']?.toString() ?? '')?.toInt() ?? 1,
+      confidenceScore: (json['confidenceScore'] as num?)?.toDouble() ?? double.tryParse(json['confidenceScore']?.toString() ?? ''),
+      language: _safeStr(json['language']) ?? 'en',
+      createdAt: _safeStr(json['createdAt']),
       documentIds: docList,
     );
   }
@@ -245,18 +295,53 @@ class ReportsResponse {
   }
 }
 
+/// Source document referenced in report content.
+class ReportSourceDocument {
+  final String id;
+  final String originalName;
+  final String? filename;
+
+  const ReportSourceDocument({
+    required this.id,
+    required this.originalName,
+    this.filename,
+  });
+
+  factory ReportSourceDocument.fromJson(Map<String, dynamic> json) {
+    return ReportSourceDocument(
+      id: ReportModel._safeStr(json['_id']) ?? ReportModel._safeStr(json['id']) ?? '',
+      originalName: ReportModel._safeStr(json['originalName']) ??
+          ReportModel._safeStr(json['filename']) ??
+          'Source Document',
+      filename: ReportModel._safeStr(json['filename']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        '_id': id,
+        'originalName': originalName,
+        if (filename != null) 'filename': filename,
+      };
+}
+
 /// Request payload for generating report: POST /api/v1/reports/generate.
 class ReportGenerateRequest {
   final String type;
   final String title;
   final List<String> documentIds;
   final String language;
+  final String? period;
+  final String? mine;
+  final String? instructions;
 
   const ReportGenerateRequest({
     required this.type,
     required this.title,
     this.documentIds = const [],
     this.language = 'en',
+    this.period,
+    this.mine,
+    this.instructions,
   });
 
   Map<String, dynamic> toJson() => {
@@ -264,6 +349,9 @@ class ReportGenerateRequest {
         'title': title,
         'documentIds': documentIds,
         'language': language,
+        if (period != null && period!.trim().isNotEmpty) 'period': period!.trim(),
+        if (mine != null && mine!.trim().isNotEmpty) 'mine': mine!.trim(),
+        if (instructions != null && instructions!.trim().isNotEmpty) 'instructions': instructions!.trim(),
       };
 }
 
@@ -435,17 +523,60 @@ class ReviewItemModel {
   });
 
   factory ReviewItemModel.fromJson(Map<String, dynamic> json) {
+    String submittedByStr = 'Analyst';
+    final rawSubmitted = json['submittedBy'] ?? json['generatedBy'];
+    if (rawSubmitted is String && rawSubmitted.isNotEmpty) {
+      submittedByStr = rawSubmitted;
+    } else if (rawSubmitted is Map) {
+      submittedByStr = rawSubmitted['username']?.toString() ??
+          rawSubmitted['name']?.toString() ??
+          rawSubmitted['_id']?.toString() ??
+          'Analyst';
+    }
+
+    ReportModel? reportObj;
+    if (json['report'] is Map) {
+      reportObj = ReportModel.fromJson(
+          Map<String, dynamic>.from(json['report'] as Map));
+    } else if (json['content'] != null) {
+      try {
+        reportObj = ReportModel.fromJson(json);
+      } catch (_) {}
+    }
+
+    int evCount = (json['evidenceCount'] as num?)?.toInt() ?? 0;
+    if (evCount == 0 && json['content'] is Map) {
+      final contentMap = json['content'] as Map;
+      if (contentMap['sources'] is List) {
+        evCount = (contentMap['sources'] as List).length;
+      }
+    } else if (evCount == 0 && reportObj != null) {
+      evCount = reportObj.sources.length;
+    }
+
+    int days = (json['daysPending'] as num?)?.toInt() ?? 0;
+    final createdRaw =
+        json['createdAt']?.toString() ?? json['submittedAt']?.toString() ?? '';
+    if (days == 0 && createdRaw.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(createdRaw);
+        days = DateTime.now().difference(dt).inDays.clamp(0, 999);
+      } catch (_) {}
+    }
+
     return ReviewItemModel(
       id: json['_id'] as String? ?? json['id'] as String? ?? '',
       reportId: json['reportId'] as String? ?? json['_id'] as String? ?? '',
       title: json['title'] as String? ?? 'Pending Review',
       type: json['type'] as String? ?? 'production_summary',
-      submittedBy: json['submittedBy'] as String? ?? json['generatedBy'] as String? ?? 'Analyst',
-      submittedAt: json['submittedAt'] as String? ?? json['createdAt'] as String? ?? '',
+      submittedBy: submittedByStr,
+      submittedAt: json['submittedAt'] as String? ??
+          json['createdAt'] as String? ??
+          '',
       confidenceScore: (json['confidenceScore'] as num?)?.toDouble() ?? 0.95,
-      evidenceCount: (json['evidenceCount'] as num?)?.toInt() ?? 0,
-      daysPending: (json['daysPending'] as num?)?.toInt() ?? 0,
-      report: json['report'] != null ? ReportModel.fromJson(json['report'] as Map<String, dynamic>) : null,
+      evidenceCount: evCount,
+      daysPending: days,
+      report: reportObj,
     );
   }
 

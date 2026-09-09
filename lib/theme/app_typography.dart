@@ -4,13 +4,16 @@ import 'app_colors.dart';
 
 /// Compact professional typography tailored for high information density,
 /// executive metrics, and tabular reports.
+/// NOTE: All text styles intentionally omit hardcoded colors (use null)
+/// so that Material3's DefaultTextStyle / Theme.of(context).textTheme
+/// correctly inherits colorScheme.onSurface in both light and dark modes.
+/// Use .copyWith(color: ...) at the call site when you need a specific color.
 class AppTypography {
   AppTypography._();
 
   static TextStyle get displayLarge => GoogleFonts.inter(
         fontSize: 32,
         fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
         letterSpacing: -0.8,
         height: 1.2,
       );
@@ -18,7 +21,6 @@ class AppTypography {
   static TextStyle get displayMedium => GoogleFonts.inter(
         fontSize: 26,
         fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
         letterSpacing: -0.5,
         height: 1.2,
       );
@@ -26,7 +28,6 @@ class AppTypography {
   static TextStyle get displaySmall => GoogleFonts.inter(
         fontSize: 22,
         fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
         letterSpacing: -0.3,
         height: 1.3,
       );
@@ -34,26 +35,22 @@ class AppTypography {
   static TextStyle get headlineLarge => GoogleFonts.inter(
         fontSize: 20,
         fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
         letterSpacing: -0.2,
       );
 
   static TextStyle get headlineMedium => GoogleFonts.inter(
         fontSize: 18,
         fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
       );
 
   static TextStyle get headlineSmall => GoogleFonts.inter(
         fontSize: 16,
         fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
       );
 
   static TextStyle get titleMedium => GoogleFonts.inter(
         fontSize: 15,
         fontWeight: FontWeight.w500,
-        color: AppColors.textPrimary,
       );
 
   static TextStyle get titleSmall => GoogleFonts.inter(
@@ -65,7 +62,6 @@ class AppTypography {
   static TextStyle get bodyLarge => GoogleFonts.inter(
         fontSize: 14,
         fontWeight: FontWeight.w400,
-        color: AppColors.textPrimary,
         height: 1.45,
       );
 
@@ -85,7 +81,6 @@ class AppTypography {
   static TextStyle get labelLarge => GoogleFonts.inter(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
       );
 
   static TextStyle get labelMedium => GoogleFonts.inter(
@@ -101,24 +96,22 @@ class AppTypography {
         letterSpacing: 0.3,
       );
 
-  // Numeric KPI Metric Styling (Bold, High Contrast)
+  // Numeric KPI Metric Styling (Bold, High Contrast) — no color; inherits from theme
   static TextStyle get kpiNumber => GoogleFonts.inter(
         fontSize: 32,
         fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
         letterSpacing: -1.0,
       );
 
   static TextStyle get kpiNumberHero => GoogleFonts.inter(
         fontSize: 36,
         fontWeight: FontWeight.w800,
-        color: AppColors.textInverse,
+        color: AppColors.textInverse, // Always white on dark hero card
         letterSpacing: -1.2,
       );
 
   static TextStyle get codeSnippet => GoogleFonts.jetBrainsMono(
         fontSize: 12,
         fontWeight: FontWeight.w400,
-        color: AppColors.textPrimary,
       );
 }

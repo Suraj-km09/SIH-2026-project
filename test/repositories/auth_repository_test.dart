@@ -52,6 +52,16 @@ void main() {
       expect(adminResult.user.isAdmin, isTrue);
     });
 
+    test('login with incorrect password throws AuthFailure', () async {
+      expect(
+        () => authRepo.login(
+          username: 'admin',
+          password: 'wrongpassword',
+        ),
+        throwsA(isA<Exception>()),
+      );
+    });
+
     test('getMe returns current profile', () async {
       final me = await authRepo.getMe();
       expect(me.id, isNotEmpty);

@@ -8,9 +8,12 @@ import '../../theme/app_colors.dart';
 import '../../widgets/badges/status_chip.dart';
 import '../../widgets/dialogs/app_dialog.dart';
 import '../../widgets/layout/responsive_layout.dart';
+import '../admin/admin_dashboard_screen.dart';
+import '../admin/system_health_screen.dart';
 import '../ai_assistant/ai_assistant_screen.dart';
 import '../analytics/analytics_screen.dart';
 import '../audit/audit_trail_screen.dart';
+import '../command_centre/command_centre_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../documents/document_list_screen.dart';
 import '../extraction/extraction_screen.dart';
@@ -78,8 +81,8 @@ class _MainShellState extends ConsumerState<MainShell> {
     if (_currentIndex == 12 && role == AppConstants.roleUser) {
       _currentIndex = 0; // Redirect from Review Queue to Dashboard
     }
-    if (_currentIndex == 14 && role != AppConstants.roleAdmin) {
-      _currentIndex = 0; // Redirect from Admin Console to Dashboard
+    if ((_currentIndex == 14 || _currentIndex == 18) && role != AppConstants.roleAdmin) {
+      _currentIndex = 0; // Redirect from Admin Console / System Health to Dashboard
     }
 
     final moduleData = _getModuleData(_currentIndex);
@@ -187,6 +190,9 @@ class _MainShellState extends ConsumerState<MainShell> {
     if (index == 0) {
       return const DashboardScreen();
     }
+    if (index == 1) {
+      return const CommandCentreScreen();
+    }
     if (index == 2) {
       return const DocumentListScreen();
     }
@@ -220,11 +226,17 @@ class _MainShellState extends ConsumerState<MainShell> {
     if (index == 13) {
       return const AuditTrailScreen();
     }
+    if (index == 14) {
+      return const AdminDashboardScreen();
+    }
     if (index == 15) {
       return const NotificationCenterScreen();
     }
     if (index == 16) {
       return const SettingsScreen();
+    }
+    if (index == 18) {
+      return const SystemHealthScreen();
     }
 
     final data = _getModuleData(index);
@@ -469,6 +481,20 @@ class _MainShellState extends ConsumerState<MainShell> {
             'Categorized FAQ search engine',
             'Mining statutory guidelines (DGMS, IBM, MCDR)',
             'System administrator contact directory',
+          ],
+        );
+      case 18:
+        return const _ModuleInfo(
+          title: 'System Health',
+          description:
+              'Monitor critical system dependencies and infrastructure.',
+          icon: Icons.show_chart,
+          targetPhase: 'Phase 13 Infrastructure',
+          plannedFeatures: [
+            'Express API Layer monitoring',
+            'MongoDB Primary Datastore status',
+            'AI Provider (Gemini) readiness gauge',
+            'Vector Embeddings engine status',
           ],
         );
       default:

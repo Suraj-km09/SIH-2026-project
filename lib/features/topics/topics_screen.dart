@@ -49,7 +49,7 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
     final state = ref.watch(topicNotifierProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       body: Column(
         children: [
           _buildHeader(state),
@@ -64,8 +64,8 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
   Widget _buildHeader(TopicState state) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
         border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
       ),
       child: ResponsiveBuilder(
@@ -160,7 +160,7 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
 
   Widget _buildTabBar() {
     return Container(
-      color: AppColors.surface,
+      color: Theme.of(context).colorScheme.surface,
       child: TabBar(
         controller: _tabController,
         isScrollable: true,
@@ -248,7 +248,7 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
         // Search Filter
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          color: AppColors.surface,
+          color: Theme.of(context).colorScheme.surface,
           child: TextField(
             controller: _searchController,
             onChanged: (query) =>
@@ -332,7 +332,7 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: AppColors.surfaceMuted,
+                                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                     borderRadius: BorderRadius.circular(4),
                                     border:
                                         Border.all(color: AppColors.borderSubtle),
@@ -574,7 +574,7 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                         children: c.keywords.map((kw) {
                           return Chip(
                             label: Text(kw, style: AppTypography.labelSmall),
-                            backgroundColor: AppColors.background,
+                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                           );
                         }).toList(),
                       ),
@@ -611,7 +611,7 @@ class _TopicsScreenState extends ConsumerState<TopicsScreen>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppColors.surfaceMuted,
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(

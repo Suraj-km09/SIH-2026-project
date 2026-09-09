@@ -85,7 +85,7 @@ class DashboardNotifier extends Notifier<DashboardState> {
     return DashboardState.initial();
   }
 
-  /// Load both Overview and KPIs concurrently.
+  /// Load both Overview and KPIs concurrently with resilient fallback, including live audit activity.
   Future<void> loadDashboard() async {
     state = DashboardState.loading(previous: state);
 
@@ -93,14 +93,25 @@ class DashboardNotifier extends Notifier<DashboardState> {
       final results = await Future.wait([
         _repository.getOverview(),
         _repository.getKpis(),
+        _repository
+            .getActivity(limit: 15)
+            .catchError((_) => <DashboardActivityModel>[]),
       ]);
 
-      final overview = results[0] as DashboardOverviewModel;
+      var overview = results[0] as DashboardOverviewModel;
       final kpis = results[1] as DashboardKpisModel;
+      final activities = results[2] as List<DashboardActivityModel>;
+
+      if (activities.isNotEmpty) {
+        overview = overview.copyWith(recentActivity: activities);
+      }
 
       state = DashboardState.success(overview: overview, kpis: kpis);
     } catch (e) {
-      state = DashboardState.error(e.toString(), previous: state);
+      state = DashboardState.error(
+        e.toString(),
+        previous: state,
+      );
     }
   }
 

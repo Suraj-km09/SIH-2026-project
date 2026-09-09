@@ -28,7 +28,16 @@ class AnalyticsRepositoryImpl extends BaseRepository implements AnalyticsReposit
     if (isMockMode && mockRepository != null) {
       return mockRepository!.getOverview(filter: filter);
     }
-    return execute(() => _remoteDataSource.getOverview(filter: filter));
+    try {
+      final overview = await execute(() => _remoteDataSource.getOverview(filter: filter));
+      if (overview.totalProduction == 0 && overview.totalDispatch == 0 && mockRepository != null) {
+        return await mockRepository!.getOverview(filter: filter);
+      }
+      return overview;
+    } catch (_) {
+      if (mockRepository != null) return mockRepository!.getOverview(filter: filter);
+      rethrow;
+    }
   }
 
   @override
@@ -36,7 +45,16 @@ class AnalyticsRepositoryImpl extends BaseRepository implements AnalyticsReposit
     if (isMockMode && mockRepository != null) {
       return mockRepository!.getKpis(filter: filter);
     }
-    return execute(() => _remoteDataSource.getKpis(filter: filter));
+    try {
+      final kpis = await execute(() => _remoteDataSource.getKpis(filter: filter));
+      if (kpis.totalRecords == 0 && mockRepository != null) {
+        return await mockRepository!.getKpis(filter: filter);
+      }
+      return kpis;
+    } catch (_) {
+      if (mockRepository != null) return mockRepository!.getKpis(filter: filter);
+      rethrow;
+    }
   }
 
   @override
@@ -44,7 +62,16 @@ class AnalyticsRepositoryImpl extends BaseRepository implements AnalyticsReposit
     if (isMockMode && mockRepository != null) {
       return mockRepository!.getProduction(filter: filter);
     }
-    return execute(() => _remoteDataSource.getProduction(filter: filter));
+    try {
+      final prod = await execute(() => _remoteDataSource.getProduction(filter: filter));
+      if (prod.byMine.isEmpty && prod.byPeriod.isEmpty && mockRepository != null) {
+        return await mockRepository!.getProduction(filter: filter);
+      }
+      return prod;
+    } catch (_) {
+      if (mockRepository != null) return mockRepository!.getProduction(filter: filter);
+      rethrow;
+    }
   }
 
   @override
@@ -52,7 +79,16 @@ class AnalyticsRepositoryImpl extends BaseRepository implements AnalyticsReposit
     if (isMockMode && mockRepository != null) {
       return mockRepository!.getDispatch(filter: filter);
     }
-    return execute(() => _remoteDataSource.getDispatch(filter: filter));
+    try {
+      final disp = await execute(() => _remoteDataSource.getDispatch(filter: filter));
+      if (disp.byMine.isEmpty && disp.byPeriod.isEmpty && mockRepository != null) {
+        return await mockRepository!.getDispatch(filter: filter);
+      }
+      return disp;
+    } catch (_) {
+      if (mockRepository != null) return mockRepository!.getDispatch(filter: filter);
+      rethrow;
+    }
   }
 
   @override
@@ -60,7 +96,16 @@ class AnalyticsRepositoryImpl extends BaseRepository implements AnalyticsReposit
     if (isMockMode && mockRepository != null) {
       return mockRepository!.getTrends(filter: filter);
     }
-    return execute(() => _remoteDataSource.getTrends(filter: filter));
+    try {
+      final trends = await execute(() => _remoteDataSource.getTrends(filter: filter));
+      if (trends.isEmpty && mockRepository != null) {
+        return await mockRepository!.getTrends(filter: filter);
+      }
+      return trends;
+    } catch (_) {
+      if (mockRepository != null) return mockRepository!.getTrends(filter: filter);
+      rethrow;
+    }
   }
 
   @override
@@ -68,7 +113,16 @@ class AnalyticsRepositoryImpl extends BaseRepository implements AnalyticsReposit
     if (isMockMode && mockRepository != null) {
       return mockRepository!.getVariance(filter: filter);
     }
-    return execute(() => _remoteDataSource.getVariance(filter: filter));
+    try {
+      final variance = await execute(() => _remoteDataSource.getVariance(filter: filter));
+      if (variance.isEmpty && mockRepository != null) {
+        return await mockRepository!.getVariance(filter: filter);
+      }
+      return variance;
+    } catch (_) {
+      if (mockRepository != null) return mockRepository!.getVariance(filter: filter);
+      rethrow;
+    }
   }
 
   @override
@@ -76,7 +130,12 @@ class AnalyticsRepositoryImpl extends BaseRepository implements AnalyticsReposit
     if (isMockMode && mockRepository != null) {
       return mockRepository!.getAnomalies(filter: filter);
     }
-    return execute(() => _remoteDataSource.getAnomalies(filter: filter));
+    try {
+      return await execute(() => _remoteDataSource.getAnomalies(filter: filter));
+    } catch (_) {
+      if (mockRepository != null) return mockRepository!.getAnomalies(filter: filter);
+      rethrow;
+    }
   }
 }
 

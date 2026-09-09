@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import '../core/constants/app_constants.dart';
@@ -38,6 +39,9 @@ class FileService {
 
   /// Resolve platform-appropriate documents directory for saving reports/downloads.
   Future<Directory> getStorageDirectory() async {
+    if (kIsWeb) {
+      throw UnsupportedError('Storage directory is not supported on web.');
+    }
     if (Platform.isAndroid) {
       final externalDir = await getExternalStorageDirectory();
       if (externalDir != null) return externalDir;

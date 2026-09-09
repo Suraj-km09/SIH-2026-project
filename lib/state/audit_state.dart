@@ -95,39 +95,95 @@ class AuditNotifier extends Notifier<AuditState> {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       if (state.entityFilterType == 'user' && state.entityFilterId != null) {
-        final logs = await _repository.getUserAudit(state.entityFilterId!);
+        var logs = await _repository.getUserAudit(state.entityFilterId!);
         if (!ref.mounted) return;
+        if (state.searchQuery.trim().isNotEmpty) {
+          final q = state.searchQuery.trim().toLowerCase();
+          logs = logs.where((l) =>
+              l.action.toLowerCase().contains(q) ||
+              l.resource.toLowerCase().contains(q) ||
+              l.user.username.toLowerCase().contains(q) ||
+              (l.resourceId?.toLowerCase().contains(q) ?? false) ||
+              l.details.toString().toLowerCase().contains(q)).toList();
+        }
         state = state.copyWith(
           logs: logs,
           isLoading: false,
         );
       } else if (state.entityFilterType == 'document' &&
           state.entityFilterId != null) {
-        final logs =
+        var logs =
             await _repository.getDocumentAudit(state.entityFilterId!);
         if (!ref.mounted) return;
+        if (state.searchQuery.trim().isNotEmpty) {
+          final q = state.searchQuery.trim().toLowerCase();
+          logs = logs.where((l) =>
+              l.action.toLowerCase().contains(q) ||
+              l.resource.toLowerCase().contains(q) ||
+              l.user.username.toLowerCase().contains(q) ||
+              (l.resourceId?.toLowerCase().contains(q) ?? false) ||
+              l.details.toString().toLowerCase().contains(q)).toList();
+        }
         state = state.copyWith(
           logs: logs,
           isLoading: false,
         );
       } else if (state.entityFilterType == 'report' &&
           state.entityFilterId != null) {
-        final logs = await _repository.getReportAudit(state.entityFilterId!);
+        var logs = await _repository.getReportAudit(state.entityFilterId!);
         if (!ref.mounted) return;
+        if (state.searchQuery.trim().isNotEmpty) {
+          final q = state.searchQuery.trim().toLowerCase();
+          logs = logs.where((l) =>
+              l.action.toLowerCase().contains(q) ||
+              l.resource.toLowerCase().contains(q) ||
+              l.user.username.toLowerCase().contains(q) ||
+              (l.resourceId?.toLowerCase().contains(q) ?? false) ||
+              l.details.toString().toLowerCase().contains(q)).toList();
+        }
         state = state.copyWith(
           logs: logs,
           isLoading: false,
         );
       } else {
+        final actionParam = state.selectedAction.toUpperCase() == 'ALL'
+            ? null
+            : state.selectedAction;
+        final statusParam = state.selectedStatus.toUpperCase() == 'ALL'
+            ? null
+            : state.selectedStatus;
+        final resourceParam = state.selectedResource.toUpperCase() == 'ALL'
+            ? null
+            : state.selectedResource;
+        final searchParam =
+            state.searchQuery.trim().isEmpty ? null : state.searchQuery.trim();
+
         final response = await _repository.getAuditLogs(
-          action: state.selectedAction,
-          status: state.selectedStatus,
-          resource: state.selectedResource,
-          search: state.searchQuery,
+          action: actionParam,
+          status: statusParam,
+          resource: resourceParam,
+          search: searchParam,
         );
         if (!ref.mounted) return;
+
+        var logs = response.logs;
+        // If client-side search query is set and server didn't already filter, filter client-side
+        if (searchParam != null) {
+          final q = searchParam.toLowerCase();
+          logs = logs.where((l) {
+            return l.action.toLowerCase().contains(q) ||
+                l.resource.toLowerCase().contains(q) ||
+                l.user.username.toLowerCase().contains(q) ||
+                (l.user.role?.toLowerCase().contains(q) ?? false) ||
+                (l.ipAddress?.toLowerCase().contains(q) ?? false) ||
+                (l.resourceId?.toLowerCase().contains(q) ?? false) ||
+                l.status.toLowerCase().contains(q) ||
+                l.details.toString().toLowerCase().contains(q);
+          }).toList();
+        }
+
         state = state.copyWith(
-          logs: response.logs,
+          logs: logs,
           meta: response.meta,
           isLoading: false,
         );

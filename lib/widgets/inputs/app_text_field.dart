@@ -6,6 +6,7 @@ import '../../theme/app_typography.dart';
 class AppTextField extends StatefulWidget {
   final String? label;
   final String? hint;
+  final String? errorText;
   final TextEditingController? controller;
   final String? Function(String?)? validator;
   final bool isPassword;
@@ -22,6 +23,7 @@ class AppTextField extends StatefulWidget {
     super.key,
     this.label,
     this.hint,
+    this.errorText,
     this.controller,
     this.validator,
     this.isPassword = false,
@@ -77,6 +79,7 @@ class _AppTextFieldState extends State<AppTextField> {
           style: AppTypography.bodyLarge,
           decoration: InputDecoration(
             hintText: widget.hint,
+            errorText: widget.errorText,
             prefixIcon: widget.prefixIcon != null
                 ? Icon(widget.prefixIcon, size: 18, color: AppColors.textTertiary)
                 : null,

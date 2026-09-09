@@ -15,7 +15,10 @@ class KnowledgeBaseRemoteDataSource {
       ApiEndpoints.knowledgeBase,
       queryParameters: filter.toQueryParams(),
     );
-    return KnowledgeBaseListResponse.fromJson(response.data as Map<String, dynamic>);
+    final map = response.data is Map
+        ? Map<String, dynamic>.from(response.data as Map)
+        : <String, dynamic>{};
+    return KnowledgeBaseListResponse.fromJson(map);
   }
 
   /// POST /api/v1/knowledge-base/index
@@ -24,19 +27,28 @@ class KnowledgeBaseRemoteDataSource {
       ApiEndpoints.knowledgeBaseIndex,
       data: {'documentId': documentId},
     );
-    return IndexDocumentResponse.fromJson(response.data as Map<String, dynamic>);
+    final map = response.data is Map
+        ? Map<String, dynamic>.from(response.data as Map)
+        : <String, dynamic>{};
+    return IndexDocumentResponse.fromJson(map);
   }
 
   /// GET /api/v1/knowledge-base/:documentId
   Future<KnowledgeBaseDetailModel> getDocumentChunks(String documentId) async {
     final response = await _apiClient.dio.get(ApiEndpoints.knowledgeBaseDocument(documentId));
-    return KnowledgeBaseDetailModel.fromJson(response.data as Map<String, dynamic>);
+    final map = response.data is Map
+        ? Map<String, dynamic>.from(response.data as Map)
+        : <String, dynamic>{};
+    return KnowledgeBaseDetailModel.fromJson(map);
   }
 
   /// DELETE /api/v1/knowledge-base/:documentId
   Future<bool> deleteDocumentIndex(String documentId) async {
     final response = await _apiClient.dio.delete(ApiEndpoints.knowledgeBaseDelete(documentId));
-    return response.statusCode == 200 || response.data['success'] == true;
+    if (response.data is Map) {
+      return response.statusCode == 200 || (response.data as Map)['success'] == true;
+    }
+    return response.statusCode == 200;
   }
 
   /// POST /api/v1/knowledge-base/search
@@ -57,13 +69,19 @@ class KnowledgeBaseRemoteDataSource {
       ApiEndpoints.knowledgeBaseSearch,
       data: body,
     );
-    return KnowledgeBaseSearchResponse.fromJson(response.data as Map<String, dynamic>);
+    final map = response.data is Map
+        ? Map<String, dynamic>.from(response.data as Map)
+        : <String, dynamic>{};
+    return KnowledgeBaseSearchResponse.fromJson(map);
   }
 
   /// POST /api/v1/rag/:documentId/index
   Future<IndexDocumentResponse> ragIndexDocument(String documentId) async {
     final response = await _apiClient.dio.post(ApiEndpoints.ragIndex(documentId));
-    return IndexDocumentResponse.fromJson(response.data as Map<String, dynamic>);
+    final map = response.data is Map
+        ? Map<String, dynamic>.from(response.data as Map)
+        : <String, dynamic>{};
+    return IndexDocumentResponse.fromJson(map);
   }
 
   /// POST /api/v1/rag/search
@@ -78,11 +96,15 @@ class KnowledgeBaseRemoteDataSource {
 
     final rawList = response.data is List
         ? response.data as List
-        : (response.data['data'] as List? ?? response.data['results'] as List? ?? []);
+        : (response.data is Map
+            ? ((response.data as Map)['data'] as List? ??
+                (response.data as Map)['results'] as List? ??
+                [])
+            : []);
 
     return rawList
-        .whereType<Map<String, dynamic>>()
-        .map(KnowledgeBaseSearchResult.fromJson)
+        .whereType<Map>()
+        .map((e) => KnowledgeBaseSearchResult.fromJson(Map<String, dynamic>.from(e)))
         .toList();
   }
 }
