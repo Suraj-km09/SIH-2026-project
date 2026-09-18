@@ -76,6 +76,8 @@ class _ReportDetailScreenState extends ConsumerState<ReportDetailScreen>
     });
 
     final report = state.report;
+    final isCompact = MediaQuery.sizeOf(context).width < 600;
+    final actionsDisabled = state.isLoading || state.isActionLoading || state.isError;
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -101,13 +103,22 @@ class _ReportDetailScreenState extends ConsumerState<ReportDetailScreen>
               Text(
                 'ID: ${report.id} • v${report.version} • Lang: ${report.language.toUpperCase()}',
                 style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Reload Report',
+            icon: const Icon(Icons.refresh),
+            onPressed: state.isLoading || state.isActionLoading
+                ? null
+                : () => ref.read(reportDetailNotifierProvider.notifier).loadReport(widget.reportId),
+          ),
           if (report != null) ...[
-            Center(
+            if (!isCompact) Center(
               child: Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: StatusChip(status: report.status),
@@ -115,6 +126,7 @@ class _ReportDetailScreenState extends ConsumerState<ReportDetailScreen>
             ),
             // Multi-format export popup menu
             PopupMenuButton<String>(
+              enabled: !actionsDisabled,
               icon: const Icon(Icons.file_download_outlined, color: AppColors.textPrimary),
               tooltip: 'Export Report',
               onSelected: (format) {
@@ -163,7 +175,8 @@ class _ReportDetailScreenState extends ConsumerState<ReportDetailScreen>
                 ),
               ],
             ),
-            _buildWorkflowActions(context, report, isAdmin, isReviewer, state.isActionLoading),
+            if (!isCompact)
+              _buildWorkflowActions(context, report, isAdmin, isReviewer, actionsDisabled),
             const SizedBox(width: 8),
           ],
         ],
@@ -183,6 +196,33 @@ class _ReportDetailScreenState extends ConsumerState<ReportDetailScreen>
         ),
       ),
       body: _buildBody(context, state, report),
+      bottomNavigationBar: isCompact && report != null
+          ? Material(
+              color: Theme.of(context).colorScheme.surface,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      StatusChip(status: report.status),
+                      if (report.isDraft || report.isReview) ...[
+                        const SizedBox(height: 8),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: _buildWorkflowActions(
+                            context, report, isAdmin, isReviewer, actionsDisabled,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : null,
     );
   }
 
@@ -218,7 +258,7 @@ class _ReportDetailScreenState extends ConsumerState<ReportDetailScreen>
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            onPressed: isActionLoading ? null : () => notifier.submitForReview(report.id),
+            onPressed: isActionLoading ? null : () => notifier.submitForReview(report.id, expectedVersion: report.revision),
             icon: const Icon(Icons.send, size: 14),
             label: const Text('Submit Review'),
           ),
@@ -245,7 +285,7 @@ class _ReportDetailScreenState extends ConsumerState<ReportDetailScreen>
                   : () => ReportRejectDialog.show(
                         context,
                         reportTitle: report.title,
-                        onReject: (reason) => notifier.rejectReport(report.id, reason),
+                        onReject: (reason) => notifier.rejectReport(report.id, reason, expectedVersion: report.revision),
                       ),
               icon: const Icon(Icons.close, size: 14),
               label: const Text('Reject'),
@@ -262,7 +302,7 @@ class _ReportDetailScreenState extends ConsumerState<ReportDetailScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
-              onPressed: (!isAdmin || isActionLoading) ? null : () => notifier.approveReport(report.id),
+              onPressed: (!isAdmin || isActionLoading) ? null : () => notifier.approveReport(report.id, expectedVersion: report.revision),
               icon: const Icon(Icons.check, size: 14),
               label: const Text('Approve (Admin)'),
             ),

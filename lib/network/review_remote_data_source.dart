@@ -33,8 +33,8 @@ class ReviewRemoteDataSource {
   }
 
   /// POST /api/v1/reviews/:id/approve (Admin only)
-  Future<ReportModel> approveReview(String id) async {
-    final response = await _apiClient.dio.post(ApiEndpoints.reviewApprove(id));
+  Future<ReportModel> approveReview(String id, {required int expectedVersion}) async {
+    final response = await _apiClient.dio.post(ApiEndpoints.reviewApprove(id), data: {'expectedVersion': expectedVersion});
     final data = response.data['data'] ?? response.data;
     final map = data is Map<String, dynamic>
         ? data
@@ -43,10 +43,10 @@ class ReviewRemoteDataSource {
   }
 
   /// POST /api/v1/reviews/:id/reject (Reviewer/Admin)
-  Future<ReportModel> rejectReview(String id, String reason) async {
+  Future<ReportModel> rejectReview(String id, String reason, {required int expectedVersion}) async {
     final response = await _apiClient.dio.post(
       ApiEndpoints.reviewReject(id),
-      data: {'reason': reason},
+      data: {'reason': reason, 'expectedVersion': expectedVersion},
     );
     final data = response.data['data'] ?? response.data;
     final map = data is Map<String, dynamic>

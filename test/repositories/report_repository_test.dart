@@ -1,9 +1,42 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mineintel_ai/config/env_config.dart';
+import 'package:mineintel_ai/core/errors/failures.dart';
 import 'package:mineintel_ai/models/report_model.dart';
+import 'package:mineintel_ai/network/report_remote_data_source.dart';
 import 'package:mineintel_ai/repositories/report_repository.dart';
 
 void main() {
+  test('live export failure never substitutes a mock report', () async {
+    final originalMockMode = EnvConfig.useMockData;
+    EnvConfig.useMockData = false;
+    addTearDown(() => EnvConfig.useMockData = originalMockMode);
+    final mock = _TrackingExportRepository();
+    final repository = ReportRepositoryImpl(
+      remoteDataSource: _FailingExportDataSource(),
+      mockRepository: mock,
+    );
+
+    for (final format in ['pdf', 'docx', 'csv', 'json']) {
+      await expectLater(repository.exportReport('rep_001', format),
+          throwsA(isA<ServerFailure>()));
+    }
+    expect(mock.exportCalls, 0);
+  });
+
+  test('explicit demo mode still uses the mock exporter', () async {
+    final originalMockMode = EnvConfig.useMockData;
+    EnvConfig.useMockData = true;
+    addTearDown(() => EnvConfig.useMockData = originalMockMode);
+    final mock = _TrackingExportRepository();
+    final repository = ReportRepositoryImpl(
+      remoteDataSource: _FailingExportDataSource(),
+      mockRepository: mock,
+    );
+
+    expect(await repository.exportReport('rep_001', 'json'), 'demo export');
+    expect(mock.exportCalls, 1);
+  });
+
   group('Phase 8 ReportRepository & MockReportRepository Tests', () {
     late ReportRepository repository;
 
@@ -58,7 +91,8 @@ void main() {
 
       final updated = await repository.updateReport(
         report.id,
-        const ReportUpdateRequest(
+        ReportUpdateRequest(
+          expectedVersion: report.revision,
           title: 'Updated Environmental Safeguards Audit',
           content: '# Updated Content\nNew observations added.',
         ),
@@ -74,7 +108,7 @@ void main() {
 
     test('submitForReview transitions status to review', () async {
       final report = await repository.getReportById('rep_003');
-      final submitted = await repository.submitForReview(report.id);
+      final submitted = await repository.submitForReview(report.id, expectedVersion: report.revision);
       expect(submitted.isReview, isTrue);
 
       final changes = await repository.getReportChanges(report.id);
@@ -82,7 +116,7 @@ void main() {
     });
 
     test('approveReport transitions status to approved with admin stamp', () async {
-      final approved = await repository.approveReport('rep_002');
+      final approved = await repository.approveReport('rep_002', expectedVersion: 0);
       expect(approved.isApproved, isTrue);
       expect(approved.approvedBy, 'admin');
       expect(approved.approvedAt, isNotNull);
@@ -92,6 +126,7 @@ void main() {
       final rejected = await repository.rejectReport(
         'rep_002',
         'Overburden bench survey failed reconciliation.',
+        expectedVersion: 0,
       );
       expect(rejected.isRejected, isTrue);
       expect(rejected.reviewerComments, 'Overburden bench survey failed reconciliation.');
@@ -127,4 +162,21 @@ void main() {
       expect(() => repository.getReportById('rep_004'), throwsA(isA<Exception>()));
     });
   });
+}
+
+class _FailingExportDataSource extends ReportRemoteDataSource {
+  @override
+  Future<dynamic> exportReport(String id, String format) async {
+    throw StateError('Export unavailable');
+  }
+}
+
+class _TrackingExportRepository extends MockReportRepository {
+  int exportCalls = 0;
+
+  @override
+  Future<dynamic> exportReport(String id, String format) async {
+    exportCalls += 1;
+    return 'demo export';
+  }
 }

@@ -46,8 +46,8 @@ class ReviewQueueState {
       status: status ?? this.status,
       items: items ?? this.items,
       activeItem: activeItem ?? this.activeItem,
-      errorMessage: errorMessage ?? this.errorMessage,
-      actionMessage: actionMessage ?? this.actionMessage,
+      errorMessage: errorMessage,
+      actionMessage: actionMessage,
       isActionLoading: isActionLoading ?? this.isActionLoading,
     );
   }
@@ -58,6 +58,7 @@ final reviewQueueNotifierProvider =
 
 class ReviewQueueNotifier extends Notifier<ReviewQueueState> {
   late final ReviewRepository _repository;
+  int _loadSequence = 0;
 
   @override
   ReviewQueueState build() {
@@ -66,17 +67,19 @@ class ReviewQueueNotifier extends Notifier<ReviewQueueState> {
   }
 
   Future<void> loadPendingReviews() async {
+    if (state.isActionLoading) return;
+    final sequence = ++_loadSequence;
     state = state.copyWith(status: ViewStatus.loading, errorMessage: null);
 
     try {
       final items = await _repository.getPendingReviews();
-      if (!ref.mounted) return;
+      if (!ref.mounted || sequence != _loadSequence) return;
       state = state.copyWith(
         status: ViewStatus.success,
         items: items,
       );
     } catch (e) {
-      if (!ref.mounted) return;
+      if (!ref.mounted || sequence != _loadSequence) return;
       state = state.copyWith(
         status: ViewStatus.error,
         errorMessage: e.toString(),
@@ -85,6 +88,7 @@ class ReviewQueueNotifier extends Notifier<ReviewQueueState> {
   }
 
   Future<void> loadReview(String id) async {
+    if (state.isLoading || state.isActionLoading) return;
     state = state.copyWith(isActionLoading: true, errorMessage: null);
 
     try {
@@ -103,11 +107,12 @@ class ReviewQueueNotifier extends Notifier<ReviewQueueState> {
     }
   }
 
-  Future<bool> approveReview(String id) async {
+  Future<bool> approveReview(String id, {required int expectedVersion}) async {
+    if (state.isLoading || state.isActionLoading) return false;
     state = state.copyWith(isActionLoading: true, errorMessage: null);
 
     try {
-      await _repository.approveReview(id);
+      await _repository.approveReview(id, expectedVersion: expectedVersion);
       if (!ref.mounted) return true;
       final updatedList = state.items.where((i) => i.id != id && i.reportId != id).toList();
       state = state.copyWith(
@@ -128,11 +133,12 @@ class ReviewQueueNotifier extends Notifier<ReviewQueueState> {
     }
   }
 
-  Future<bool> rejectReview(String id, String reason) async {
+  Future<bool> rejectReview(String id, String reason, {required int expectedVersion}) async {
+    if (state.isLoading || state.isActionLoading) return false;
     state = state.copyWith(isActionLoading: true, errorMessage: null);
 
     try {
-      await _repository.rejectReview(id, reason);
+      await _repository.rejectReview(id, reason, expectedVersion: expectedVersion);
       if (!ref.mounted) return true;
       final updatedList = state.items.where((i) => i.id != id && i.reportId != id).toList();
       state = state.copyWith(

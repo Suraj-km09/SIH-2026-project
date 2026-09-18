@@ -42,7 +42,7 @@ void main() {
       final items = await reviewRepo.getPendingReviews();
       final target = items.first;
 
-      final approved = await reviewRepo.approveReview(target.id);
+      final approved = await reviewRepo.approveReview(target.id, expectedVersion: target.revision);
       expect(approved.isApproved, isTrue);
       expect(approved.approvedBy, 'admin');
     });
@@ -54,6 +54,7 @@ void main() {
       final rejected = await reviewRepo.rejectReview(
         target.id,
         'Survey benchmarks require re-triangulation.',
+        expectedVersion: target.revision,
       );
       expect(rejected.isRejected, isTrue);
       expect(rejected.reviewerComments, 'Survey benchmarks require re-triangulation.');

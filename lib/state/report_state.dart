@@ -260,8 +260,8 @@ class ReportDetailState {
       evidence: evidence ?? this.evidence,
       versions: versions ?? this.versions,
       changes: changes ?? this.changes,
-      errorMessage: errorMessage ?? this.errorMessage,
-      actionMessage: actionMessage ?? this.actionMessage,
+      errorMessage: errorMessage,
+      actionMessage: actionMessage,
       isActionLoading: isActionLoading ?? this.isActionLoading,
     );
   }
@@ -272,6 +272,8 @@ final reportDetailNotifierProvider =
 
 class ReportDetailNotifier extends Notifier<ReportDetailState> {
   late final ReportRepository _repository;
+  int _loadSequence = 0;
+  String? _pendingReportId;
 
   @override
   ReportDetailState build() {
@@ -280,6 +282,11 @@ class ReportDetailNotifier extends Notifier<ReportDetailState> {
   }
 
   Future<void> loadReport(String id) async {
+    if (state.isActionLoading) {
+      _pendingReportId = id;
+      return;
+    }
+    final sequence = ++_loadSequence;
     state = state.copyWith(status: ViewStatus.loading, errorMessage: null);
 
     try {
@@ -289,6 +296,7 @@ class ReportDetailNotifier extends Notifier<ReportDetailState> {
         _repository.getReportVersionHistory(id),
         _repository.getReportChanges(id),
       ]);
+      if (!ref.mounted || sequence != _loadSequence) return;
 
       final report = results[0] as ReportModel;
       final evidence = results[1] as List<CitedEvidenceModel>;
@@ -303,6 +311,7 @@ class ReportDetailNotifier extends Notifier<ReportDetailState> {
         changes: changes,
       );
     } catch (e) {
+      if (!ref.mounted || sequence != _loadSequence) return;
       state = state.copyWith(
         status: ViewStatus.error,
         errorMessage: e.toString(),
@@ -311,103 +320,125 @@ class ReportDetailNotifier extends Notifier<ReportDetailState> {
   }
 
   Future<bool> updateReport(String id, ReportUpdateRequest request) async {
+    if (state.isLoading || state.isActionLoading) return false;
     state = state.copyWith(isActionLoading: true, errorMessage: null);
 
     try {
       final updated = await _repository.updateReport(id, request);
-      final history = await _repository.getReportVersionHistory(id);
-
-      state = state.copyWith(
-        report: updated,
-        versions: history,
-        isActionLoading: false,
-        actionMessage: 'Report updated to version ${updated.version}.',
-      );
-      // Also update list state if loaded
-      ref.read(reportListNotifierProvider.notifier).loadReports();
+      await _completeMutation(updated, 'Report updated to version ${updated.version}.');
       return true;
     } catch (e) {
+      if (!ref.mounted) return false;
       state = state.copyWith(
         isActionLoading: false,
         errorMessage: e.toString(),
       );
       return false;
+    } finally {
+      await _loadPendingReport();
     }
   }
 
-  Future<bool> submitForReview(String id) async {
+  Future<bool> submitForReview(String id, {required int expectedVersion}) async {
+    if (state.isLoading || state.isActionLoading) return false;
     state = state.copyWith(isActionLoading: true, errorMessage: null);
 
     try {
-      final updated = await _repository.submitForReview(id);
-      final changes = await _repository.getReportChanges(id);
-
-      state = state.copyWith(
-        report: updated,
-        changes: changes,
-        isActionLoading: false,
-        actionMessage: 'Report submitted for governance review.',
-      );
-      ref.read(reportListNotifierProvider.notifier).loadReports();
+      final updated = await _repository.submitForReview(id, expectedVersion: expectedVersion);
+      await _completeMutation(updated, 'Report submitted for governance review.');
       return true;
     } catch (e) {
+      if (!ref.mounted) return false;
       state = state.copyWith(
         isActionLoading: false,
         errorMessage: e.toString(),
       );
       return false;
+    } finally {
+      await _loadPendingReport();
     }
   }
 
-  Future<bool> approveReport(String id) async {
+  Future<bool> approveReport(String id, {required int expectedVersion}) async {
+    if (state.isLoading || state.isActionLoading) return false;
     state = state.copyWith(isActionLoading: true, errorMessage: null);
 
     try {
-      final updated = await _repository.approveReport(id);
-      final changes = await _repository.getReportChanges(id);
-
-      state = state.copyWith(
-        report: updated,
-        changes: changes,
-        isActionLoading: false,
-        actionMessage: 'Report formally approved and published.',
-      );
-      ref.read(reportListNotifierProvider.notifier).loadReports();
+      final updated = await _repository.approveReport(id, expectedVersion: expectedVersion);
+      await _completeMutation(updated, 'Report formally approved and published.');
       return true;
     } catch (e) {
+      if (!ref.mounted) return false;
       state = state.copyWith(
         isActionLoading: false,
         errorMessage: e.toString(),
       );
       return false;
+    } finally {
+      await _loadPendingReport();
     }
   }
 
-  Future<bool> rejectReport(String id, String reason) async {
+  Future<bool> rejectReport(String id, String reason, {required int expectedVersion}) async {
+    if (state.isLoading || state.isActionLoading) return false;
     state = state.copyWith(isActionLoading: true, errorMessage: null);
 
     try {
-      final updated = await _repository.rejectReport(id, reason);
-      final changes = await _repository.getReportChanges(id);
-
-      state = state.copyWith(
-        report: updated,
-        changes: changes,
-        isActionLoading: false,
-        actionMessage: 'Report rejected with comments recorded.',
-      );
-      ref.read(reportListNotifierProvider.notifier).loadReports();
+      final updated = await _repository.rejectReport(id, reason, expectedVersion: expectedVersion);
+      await _completeMutation(updated, 'Report rejected with comments recorded.');
       return true;
     } catch (e) {
+      if (!ref.mounted) return false;
       state = state.copyWith(
         isActionLoading: false,
         errorMessage: e.toString(),
       );
       return false;
+    } finally {
+      await _loadPendingReport();
+    }
+  }
+
+  Future<void> _loadPendingReport() async {
+    if (!ref.mounted) return;
+    final reportId = _pendingReportId;
+    _pendingReportId = null;
+    if (reportId != null) await loadReport(reportId);
+  }
+
+  Future<void> _completeMutation(ReportModel updated, String message) async {
+    if (!ref.mounted) return;
+    state = state.copyWith(
+      report: updated,
+      versions: const [],
+      changes: const [],
+      actionMessage: message,
+    );
+    ref.read(reportListNotifierProvider.notifier).loadReports();
+    try {
+      final results = await Future.wait([
+        _repository.getReportVersionHistory(updated.id),
+        _repository.getReportChanges(updated.id),
+      ]);
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        versions: results[0] as List<ReportVersionModel>,
+        changes: results[1] as List<ReportChangeModel>,
+        isActionLoading: false,
+        actionMessage: message,
+      );
+    } catch (_) {
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        isActionLoading: false,
+        actionMessage: message,
+        errorMessage: 'Report saved, but history could not be refreshed. Reload to view current history.',
+      );
     }
   }
 
   Future<String?> exportReport(String id, String format, {String? reportTitle}) async {
+    if (state.isLoading || state.isActionLoading) return null;
     state = state.copyWith(isActionLoading: true, errorMessage: null);
     try {
       final data = await _repository.exportReport(id, format);
@@ -457,17 +488,21 @@ class ReportDetailNotifier extends Notifier<ReportDetailState> {
       }
 
       final savedPath = await FileSaver.saveAndLaunchFile(bytes, fileName, mimeType: mimeType);
+      if (!ref.mounted) return savedPath ?? fileName;
       state = state.copyWith(
         isActionLoading: false,
         actionMessage: 'Report exported as $fileName. Download started.',
       );
       return savedPath ?? fileName;
     } catch (e) {
+      if (!ref.mounted) return null;
       state = state.copyWith(
         isActionLoading: false,
         errorMessage: 'Export failed: $e',
       );
       return null;
+    } finally {
+      await _loadPendingReport();
     }
   }
 }

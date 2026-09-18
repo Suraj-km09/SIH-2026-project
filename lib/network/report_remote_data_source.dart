@@ -53,24 +53,24 @@ class ReportRemoteDataSource {
   }
 
   /// POST /api/v1/reports/:id/submit-review
-  Future<ReportModel> submitForReview(String id) async {
-    final response = await _apiClient.dio.post(ApiEndpoints.reportSubmitReview(id));
+  Future<ReportModel> submitForReview(String id, {required int expectedVersion}) async {
+    final response = await _apiClient.dio.post(ApiEndpoints.reportSubmitReview(id), data: {'expectedVersion': expectedVersion});
     final data = response.data['data'] ?? response.data;
     return ReportModel.fromJson(data as Map<String, dynamic>);
   }
 
   /// POST /api/v1/reports/:id/approve (Admin only)
-  Future<ReportModel> approveReport(String id) async {
-    final response = await _apiClient.dio.post(ApiEndpoints.reportApprove(id));
+  Future<ReportModel> approveReport(String id, {required int expectedVersion}) async {
+    final response = await _apiClient.dio.post(ApiEndpoints.reportApprove(id), data: {'expectedVersion': expectedVersion});
     final data = response.data['data'] ?? response.data;
     return ReportModel.fromJson(data as Map<String, dynamic>);
   }
 
   /// POST /api/v1/reports/:id/reject (Reviewer/Admin)
-  Future<ReportModel> rejectReport(String id, String reason) async {
+  Future<ReportModel> rejectReport(String id, String reason, {required int expectedVersion}) async {
     final response = await _apiClient.dio.post(
       ApiEndpoints.reportReject(id),
-      data: {'reason': reason},
+      data: {'reason': reason, 'expectedVersion': expectedVersion},
     );
     final data = response.data['data'] ?? response.data;
     return ReportModel.fromJson(data as Map<String, dynamic>);

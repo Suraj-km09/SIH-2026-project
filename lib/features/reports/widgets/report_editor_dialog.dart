@@ -65,6 +65,7 @@ class _ReportEditorDialogState extends State<ReportEditorDialog> {
     });
 
     final request = ReportUpdateRequest(
+      expectedVersion: widget.report.revision,
       title: title,
       content: _contentController.text,
       type: _type,

@@ -3,6 +3,52 @@ import 'package:mineintel_ai/models/report_model.dart';
 
 void main() {
   group('Phase 8 Report Models Tests', () {
+    test('review revisions round trip for flat and nested responses', () {
+      for (final revision in [0, 8]) {
+        for (final json in <Map<String, dynamic>>[
+          {'_id': 'report', '__v': revision, 'version': 99},
+          {'_id': 'review', 'report': {'_id': 'report', '__v': revision, 'version': 99}},
+        ]) {
+          final item = ReviewItemModel.fromJson(json);
+          expect(item.revision, revision);
+          expect(ReviewItemModel.fromJson(item.toJson()).revision, revision);
+        }
+      }
+    });
+    test('update payload includes the viewed revision including zero', () {
+      for (final revision in [0, 7]) {
+        final request = ReportUpdateRequest(
+          expectedVersion: revision,
+          title: 'Updated',
+        );
+        expect(request.toJson(), {
+          'expectedVersion': revision,
+          'title': 'Updated',
+        });
+      }
+    });
+
+    test('backend revision stays separate from the published version', () {
+      final report = ReportModel.fromJson({
+        '_id': 'report-1',
+        'version': 3,
+        '__v': 7,
+      });
+
+      expect(report.version, 3);
+      expect(report.revision, 7);
+      expect(report.toJson()['__v'], 7);
+      expect(report.copyWith(title: 'Edited').revision, 7);
+      expect(report.copyWith(revision: 0).revision, 0);
+      expect(ReportModel.fromJson(report.toJson()).revision, 7);
+    });
+
+    test('legacy reports default to revision zero, not published version', () {
+      final report = ReportModel.fromJson({'version': 9});
+      expect(report.revision, 0);
+      expect(report.version, 9);
+    });
+
     test('ReportModel json serialization and deserialization', () {
       final json = {
         '_id': 'rep_101',
