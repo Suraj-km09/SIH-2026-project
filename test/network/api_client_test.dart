@@ -1,9 +1,95 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mineintel_ai/config/env_config.dart';
 import 'package:mineintel_ai/network/api_client.dart';
 import 'package:mineintel_ai/network/api_response.dart';
+import 'package:mineintel_ai/models/report_model.dart';
+import 'package:mineintel_ai/network/report_remote_data_source.dart';
+import 'package:mineintel_ai/network/review_remote_data_source.dart';
 
 void main() {
+  group('Report mutation transport', () {
+    late ApiClient client;
+    late List<Interceptor> originalInterceptors;
+    late List<RequestOptions> requests;
+
+    setUp(() {
+      client = ApiClient();
+      originalInterceptors = client.dio.interceptors.toList();
+      requests = [];
+      client.dio.interceptors.clear();
+    });
+
+    tearDown(() {
+      client.dio.interceptors.clear();
+      client.dio.interceptors.addAll(originalInterceptors);
+    });
+
+    test('all report and review mutations send exact viewed revisions', () async {
+      client.dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
+        requests.add(options);
+        handler.resolve(Response(
+          requestOptions: options,
+          statusCode: 200,
+          data: {'data': {'_id': 'report-1', '__v': (options.data['expectedVersion'] as int) + 1, 'version': 99}},
+        ));
+      }));
+      final reports = ReportRemoteDataSource(apiClient: client);
+      final reviews = ReviewRemoteDataSource(apiClient: client);
+      for (final revision in [0, 7]) {
+        final updated = await reports.updateReport('report-1', ReportUpdateRequest(expectedVersion: revision, title: 'Draft'));
+        expect(updated.revision, revision + 1);
+        await reports.submitForReview('report-1', expectedVersion: revision);
+        await reports.approveReport('report-1', expectedVersion: revision);
+        await reports.rejectReport('report-1', 'Source mismatch', expectedVersion: revision);
+        await reviews.approveReview('report-1', expectedVersion: revision);
+        await reviews.rejectReview('report-1', 'Source mismatch', expectedVersion: revision);
+        final batch = requests.sublist(requests.length - 6);
+        expect(batch.map((request) => request.method), ['PUT', 'POST', 'POST', 'POST', 'POST', 'POST']);
+        expect(batch.map((request) => request.path), [
+          '/reports/report-1', '/reports/report-1/submit-review',
+          '/reports/report-1/approve', '/reports/report-1/reject',
+          '/reviews/report-1/approve', '/reviews/report-1/reject',
+        ]);
+        expect(batch.map((request) => request.data), [
+          {'expectedVersion': revision, 'title': 'Draft'},
+          {'expectedVersion': revision}, {'expectedVersion': revision},
+          {'reason': 'Source mismatch', 'expectedVersion': revision},
+          {'expectedVersion': revision},
+          {'reason': 'Source mismatch', 'expectedVersion': revision},
+        ]);
+      }
+    });
+
+    test('conflicts propagate without fetching or replaying mutations', () async {
+      client.dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
+        requests.add(options);
+        handler.reject(DioException(
+          requestOptions: options,
+          type: DioExceptionType.badResponse,
+          response: Response(requestOptions: options, statusCode: 409,
+            data: {'success': false, 'error': 'REPORT_CONFLICT', 'message': 'Reload report'}),
+        ));
+      }));
+      final reports = ReportRemoteDataSource(apiClient: client);
+      final reviews = ReviewRemoteDataSource(apiClient: client);
+      final actions = <Future<ReportModel> Function()>[
+        () => reports.updateReport('report-1', const ReportUpdateRequest(expectedVersion: 0, title: 'Draft')),
+        () => reports.submitForReview('report-1', expectedVersion: 0),
+        () => reports.approveReport('report-1', expectedVersion: 0),
+        () => reports.rejectReport('report-1', 'Reason', expectedVersion: 0),
+        () => reviews.approveReview('report-1', expectedVersion: 0),
+        () => reviews.rejectReview('report-1', 'Reason', expectedVersion: 0),
+      ];
+      for (final action in actions) {
+        await expectLater(action(), throwsA(isA<DioException>().having((error) => error.response?.statusCode, 'status', 409)));
+      }
+      expect(requests.length, actions.length);
+      expect(requests.every((request) => request.data['expectedVersion'] == 0), isTrue);
+      expect(requests.any((request) => request.method == 'GET'), isFalse);
+    });
+  });
+
   group('ApiClient & ApiResponse Tests', () {
     late ApiClient apiClient;
 

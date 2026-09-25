@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mineintel_ai/features/reports/report_detail_screen.dart';
 import 'package:mineintel_ai/features/reports/reports_list_screen.dart';
 import 'package:mineintel_ai/features/reports/widgets/report_generate_dialog.dart';
+import 'package:mineintel_ai/features/reports/widgets/report_editor_dialog.dart';
+import 'package:mineintel_ai/features/reports/widgets/report_reject_dialog.dart';
 import 'package:mineintel_ai/models/report_model.dart';
 import 'package:mineintel_ai/models/user_model.dart';
 import 'package:mineintel_ai/repositories/document_repository.dart';
@@ -16,6 +18,86 @@ import 'package:mineintel_ai/state/document_state.dart';
 import 'package:mineintel_ai/state/report_state.dart';
 
 void main() {
+  for (final width in [320.0, 390.0, 1280.0]) {
+    for (final reportId in ['rep_003', 'rep_002']) {
+      testWidgets('report $reportId controls fit at $width pixels', (tester) async {
+        tester.view.physicalSize = Size(width, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(ProviderScope(
+          overrides: [
+            reportRepositoryProvider.overrideWithValue(MockReportRepository()),
+            authNotifierProvider.overrideWith(() => _FakeAuthNotifier(
+              const UserModel(id: 'admin', username: 'admin', role: 'admin'),
+            )),
+          ],
+          child: MaterialApp(home: ReportDetailScreen(reportId: reportId)),
+        ));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.byTooltip('Reload Report').hitTestable(), findsOneWidget);
+        expect(find.byTooltip('Export Report').hitTestable(), findsOneWidget);
+        final title = find.descendant(of: find.byType(AppBar), matching: find.byType(Text)).first;
+        expect(tester.getSize(title).width, greaterThan(80));
+        if (reportId == 'rep_003') {
+          expect(find.text('Submit Review').hitTestable(), findsOneWidget);
+          await tester.tap(find.byTooltip('Edit Report'));
+          await tester.pumpAndSettle();
+          expect(find.byType(ReportEditorDialog), findsOneWidget);
+        } else {
+          expect(find.text('Approve (Admin)').hitTestable(), findsOneWidget);
+          await tester.tap(find.text('Reject'));
+          await tester.pumpAndSettle();
+          expect(find.byType(ReportRejectDialog), findsOneWidget);
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets('failed editor save retains draft and captured revision', (tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final requests = <ReportUpdateRequest>[];
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: ReportEditorDialog(
+      report: const ReportModel(id: 'report', title: 'Original', type: 'production_summary', status: 'draft', content: 'Original body', revision: 7, version: 99),
+      onSave: (request) async { requests.add(request); return false; },
+    ))));
+    await tester.enterText(find.byType(TextField).first, 'Unsaved title');
+    await tester.enterText(find.byType(TextField).last, 'Unsaved content');
+    await tester.tap(find.text('Save Changes'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ReportEditorDialog), findsOneWidget);
+    expect(find.text('Unsaved title'), findsOneWidget);
+    expect(find.text('Unsaved content'), findsOneWidget);
+    await tester.tap(find.text('Save Changes'));
+    await tester.pumpAndSettle();
+    expect(requests.map((request) => request.expectedVersion), [7, 7]);
+    expect(requests.last.title, 'Unsaved title');
+    expect(requests.last.content, 'Unsaved content');
+  });
+
+  testWidgets('failed rejection retains entered justification', (tester) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final reasons = <String>[];
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: ReportRejectDialog(
+      reportTitle: 'Report',
+      onReject: (reason) async { reasons.add(reason); return false; },
+    ))));
+    await tester.enterText(find.byType(TextField), 'Retain this justification');
+    await tester.tap(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+    expect(find.byType(ReportRejectDialog), findsOneWidget);
+    expect(find.text('Retain this justification'), findsOneWidget);
+    expect(reasons, ['Retain this justification']);
+  });
+
   group('Phase 8 ReportsListScreen Widget Tests', () {
     testWidgets('Renders report list, KPI stats cards, and filter toolbar', (tester) async {
       tester.view.physicalSize = const Size(1280, 800);

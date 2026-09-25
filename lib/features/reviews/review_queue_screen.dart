@@ -434,7 +434,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                               : () => ReportRejectDialog.show(
                                     context,
                                     reportTitle: item.title,
-                                    onReject: (reason) => notifier.rejectReview(item.id, reason),
+                                    onReject: (reason) => notifier.rejectReview(item.id, reason, expectedVersion: item.revision),
                                   ),
                           icon: const Icon(Icons.close, size: 14),
                           label: const Text('Reject'),
@@ -452,7 +452,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                           ),
                           onPressed: (!isAdmin || isActionLoading)
                               ? null
-                              : () => notifier.approveReview(item.id),
+                              : () => notifier.approveReview(item.id, expectedVersion: item.revision),
                           icon: const Icon(Icons.check, size: 14),
                           label: const Text('Approve'),
                         ),
@@ -637,7 +637,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                               InkWell(
                                 onTap: (!isAdmin || isActionLoading)
                                     ? null
-                                    : () => notifier.approveReview(item.id),
+                                    : () => notifier.approveReview(item.id, expectedVersion: item.revision),
                                 borderRadius: BorderRadius.circular(8),
                                 child: Container(
                                   width: 32,
@@ -666,7 +666,7 @@ class _ReviewQueueScreenState extends ConsumerState<ReviewQueueScreen> {
                                       : () => ReportRejectDialog.show(
                                             context,
                                             reportTitle: item.title,
-                                            onReject: (reason) => notifier.rejectReview(item.id, reason),
+                                            onReject: (reason) => notifier.rejectReview(item.id, reason, expectedVersion: item.revision),
                                           ),
                                   borderRadius: BorderRadius.circular(8),
                                   child: Container(

@@ -1,3 +1,4 @@
+import '../core/errors/exceptions.dart';
 import '../features/reports/utils/report_export_generator.dart';
 import '../models/report_model.dart';
 import '../network/report_remote_data_source.dart';
@@ -10,9 +11,9 @@ abstract class ReportRepository {
   Future<ReportModel> getReportById(String id);
   Future<ReportModel> updateReport(String id, ReportUpdateRequest request);
   Future<bool> deleteReport(String id);
-  Future<ReportModel> submitForReview(String id);
-  Future<ReportModel> approveReport(String id);
-  Future<ReportModel> rejectReport(String id, String reason);
+  Future<ReportModel> submitForReview(String id, {required int expectedVersion});
+  Future<ReportModel> approveReport(String id, {required int expectedVersion});
+  Future<ReportModel> rejectReport(String id, String reason, {required int expectedVersion});
   Future<List<CitedEvidenceModel>> getReportEvidence(String id);
   Future<List<ReportVersionModel>> getReportVersionHistory(String id);
   Future<List<ReportChangeModel>> getReportChanges(String id);
@@ -70,27 +71,27 @@ class ReportRepositoryImpl extends BaseRepository implements ReportRepository {
   }
 
   @override
-  Future<ReportModel> submitForReview(String id) async {
+  Future<ReportModel> submitForReview(String id, {required int expectedVersion}) async {
     if (isMockMode && mockRepository != null) {
-      return mockRepository!.submitForReview(id);
+      return mockRepository!.submitForReview(id, expectedVersion: expectedVersion);
     }
-    return execute(() => _remoteDataSource.submitForReview(id));
+    return execute(() => _remoteDataSource.submitForReview(id, expectedVersion: expectedVersion));
   }
 
   @override
-  Future<ReportModel> approveReport(String id) async {
+  Future<ReportModel> approveReport(String id, {required int expectedVersion}) async {
     if (isMockMode && mockRepository != null) {
-      return mockRepository!.approveReport(id);
+      return mockRepository!.approveReport(id, expectedVersion: expectedVersion);
     }
-    return execute(() => _remoteDataSource.approveReport(id));
+    return execute(() => _remoteDataSource.approveReport(id, expectedVersion: expectedVersion));
   }
 
   @override
-  Future<ReportModel> rejectReport(String id, String reason) async {
+  Future<ReportModel> rejectReport(String id, String reason, {required int expectedVersion}) async {
     if (isMockMode && mockRepository != null) {
-      return mockRepository!.rejectReport(id, reason);
+      return mockRepository!.rejectReport(id, reason, expectedVersion: expectedVersion);
     }
-    return execute(() => _remoteDataSource.rejectReport(id, reason));
+    return execute(() => _remoteDataSource.rejectReport(id, reason, expectedVersion: expectedVersion));
   }
 
   @override
@@ -122,16 +123,7 @@ class ReportRepositoryImpl extends BaseRepository implements ReportRepository {
     if (isMockMode && mockRepository != null) {
       return mockRepository!.exportReport(id, format);
     }
-    try {
-      return await execute(() => _remoteDataSource.exportReport(id, format));
-    } catch (_) {
-      // If remote backend returns 503/404 or network is unavailable,
-      // fallback smoothly to high-fidelity statutory report generator
-      if (mockRepository != null) {
-        return await mockRepository!.exportReport(id, format);
-      }
-      rethrow;
-    }
+    return execute(() => _remoteDataSource.exportReport(id, format));
   }
 }
 
@@ -144,6 +136,18 @@ class MockReportRepository implements ReportRepository {
 
   MockReportRepository() {
     _seedData();
+  }
+
+  void _checkRevision(ReportModel report, int expectedVersion) {
+    if (expectedVersion < 0) {
+      throw const ValidationException('Invalid report revision.', code: 'INVALID_REPORT_VERSION');
+    }
+    if (report.revision != expectedVersion) {
+      throw const ConflictException(
+        'Report changed. Reload the report before trying again.',
+        code: 'REPORT_CONFLICT',
+      );
+    }
   }
 
   void _seedData() {
@@ -459,7 +463,9 @@ Review and verify all parameters prior to submitting for formal administrative r
     if (index < 0) throw Exception('Report $id not found');
 
     final existing = _reports[index];
+    _checkRevision(existing, request.expectedVersion);
     final updated = existing.copyWith(
+      revision: existing.revision + 1,
       title: request.title ?? existing.title,
       content: request.content ?? existing.content,
       type: request.type ?? existing.type,
@@ -497,12 +503,13 @@ Review and verify all parameters prior to submitting for formal administrative r
   }
 
   @override
-  Future<ReportModel> submitForReview(String id) async {
+  Future<ReportModel> submitForReview(String id, {required int expectedVersion}) async {
     await Future.delayed(const Duration(milliseconds: 150));
     final index = _reports.indexWhere((r) => r.id == id);
     if (index < 0) throw Exception('Report $id not found');
 
-    final updated = _reports[index].copyWith(status: 'review');
+    _checkRevision(_reports[index], expectedVersion);
+    final updated = _reports[index].copyWith(status: 'review', revision: _reports[index].revision + 1);
     _reports[index] = updated;
 
     final changeList = _changes[id] ?? [];
@@ -521,13 +528,15 @@ Review and verify all parameters prior to submitting for formal administrative r
   }
 
   @override
-  Future<ReportModel> approveReport(String id) async {
+  Future<ReportModel> approveReport(String id, {required int expectedVersion}) async {
     await Future.delayed(const Duration(milliseconds: 150));
     final index = _reports.indexWhere((r) => r.id == id);
     if (index < 0) throw Exception('Report $id not found');
 
     final now = DateTime.now().toIso8601String();
+    _checkRevision(_reports[index], expectedVersion);
     final updated = _reports[index].copyWith(
+      revision: _reports[index].revision + 1,
       status: 'approved',
       approvedBy: 'admin',
       approvedAt: now,
@@ -550,13 +559,15 @@ Review and verify all parameters prior to submitting for formal administrative r
   }
 
   @override
-  Future<ReportModel> rejectReport(String id, String reason) async {
+  Future<ReportModel> rejectReport(String id, String reason, {required int expectedVersion}) async {
     await Future.delayed(const Duration(milliseconds: 150));
     final index = _reports.indexWhere((r) => r.id == id);
     if (index < 0) throw Exception('Report $id not found');
 
     final now = DateTime.now().toIso8601String();
+    _checkRevision(_reports[index], expectedVersion);
     final updated = _reports[index].copyWith(
+      revision: _reports[index].revision + 1,
       status: 'rejected',
       reviewerId: 'reviewer',
       reviewerComments: reason,

@@ -2,6 +2,65 @@
 
 ### AI-Powered Mining Intelligence, Document Ingestion & Automated Compliance Platform
 
+## Flutter App Development
+
+This repository contains the Flutter client. Use Flutter **3.47.4** (Dart
+**3.13.3**), matching the CI SDK and the Dart constraint in `pubspec.yaml`.
+Run these commands from this repository's root:
+
+```sh
+flutter pub get --enforce-lockfile
+flutter analyze --no-pub
+flutter test --no-pub
+flutter build web --no-pub
+```
+
+On Windows, enable **Developer Mode** in Windows Settings before dependency
+setup or native builds: Flutter plugins require symbolic links. If dependencies
+have already resolved but plugin-link creation is blocked, pure Dart and widget
+tests can still run with `flutter test --no-pub`. This is not a substitute for
+Developer Mode when building a native app. Android builds additionally require
+the Android SDK; iOS builds require macOS and Xcode. CI checks analysis, tests,
+and web compilation on Linux, not native builds, signing, or live API integration.
+
+The app defaults to the production API. Use the environment configuration in
+`lib/config/env_config.dart` for local development; do not use production data
+for automated mutation tests.
+
+### Report Concurrency
+
+Report `revision` preserves backend `__v`, independently of the displayed
+publication `version`. Update, submit, approve, and reject requests include the
+revision of the displayed report as `expectedVersion`, including zero. The review
+queue uses the same contract. Legacy responses without `__v` default to zero.
+
+On a conflict, the app does not fetch a newer revision and replay the mutation.
+Failed editor saves and rejection submissions retain their entered text while
+the dialog stays open. Close the dialog and explicitly reload the report (or
+refresh the review queue) before reviewing and retrying against current data.
+Draft text is not persisted after closing a dialog; retain needed text before
+closing it. The backend must enforce `expectedVersion` on both report and review
+routes for stale-view protection.
+
+On phones, report status and workflow actions appear below the report content,
+leaving the header available for the title, reload, and export controls. Actions
+are disabled during reload and after a failed load. Rejection dialog actions wrap
+on narrow displays.
+
+Live export errors are surfaced to the user; the app never substitutes a mock
+report for a failed live download. Mock exports are available only in explicit
+demo mode.
+
+Successful report mutations retain the returned report and revision even if a
+subsequent history refresh fails. The app reports that the report was saved and
+asks for an explicit reload of history, without replaying the mutation. Both
+version history and change log are refreshed after a successful mutation.
+Report detail and review queue ignore superseded load responses and block
+overlapping workflow actions while loading or processing another action.
+
+GitHub Actions runs the analyzer, complete Flutter test suite, and web build on
+pull requests and pushes to `main`, without production credentials.
+
 MineIntel AI is an enterprise-grade artificial intelligence platform engineered for the mining and mineral extraction sector (specifically tailored for Coal India Limited, CMPDI, and regional mining directorates). The platform transforms complex, unstructured operational reports, statutory returns, environmental audits, and production spreadsheets into structured, validated, searchable, and actionable business intelligence.
 
 Combining multimodal document extraction, rule-based and algorithmic data validation, semantic vector search, Retrieval-Augmented Generation (RAG), autonomous multi-agent orchestration, interactive conversational reasoning, and automated regulatory report generation, MineIntel AI delivers an end-to-end intelligence pipeline with verifiable provenance and institutional governance.

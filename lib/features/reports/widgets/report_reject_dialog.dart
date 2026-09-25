@@ -191,8 +191,10 @@ class _ReportRejectDialogState extends State<ReportRejectDialog> {
                 ),
               ),
               const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 12,
+                runSpacing: 8,
                 children: [
                   OutlinedButton(
                     onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(false),
@@ -202,7 +204,6 @@ class _ReportRejectDialogState extends State<ReportRejectDialog> {
                     ),
                     child: const Text('Cancel'),
                   ),
-                  const SizedBox(width: 12),
                   FilledButton.icon(
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.error,

@@ -13,6 +13,7 @@ class ReportModel {
   final String? approvedBy;
   final String? approvedAt;
   final int version;
+  final int revision;
   final double? confidenceScore;
   final String language; // en, hi
   final String? createdAt;
@@ -32,6 +33,7 @@ class ReportModel {
     this.approvedBy,
     this.approvedAt,
     this.version = 1,
+    this.revision = 0,
     this.confidenceScore,
     this.language = 'en',
     this.createdAt,
@@ -126,6 +128,7 @@ class ReportModel {
       approvedBy: approvedByStr,
       approvedAt: _safeStr(json['approvedAt']),
       version: (json['version'] as num?)?.toInt() ?? num.tryParse(json['version']?.toString() ?? '')?.toInt() ?? 1,
+      revision: json['__v'] as int? ?? 0,
       confidenceScore: (json['confidenceScore'] as num?)?.toDouble() ?? double.tryParse(json['confidenceScore']?.toString() ?? ''),
       language: _safeStr(json['language']) ?? 'en',
       createdAt: _safeStr(json['createdAt']),
@@ -147,6 +150,7 @@ class ReportModel {
         'approvedBy': approvedBy,
         'approvedAt': approvedAt,
         'version': version,
+        '__v': revision,
         'confidenceScore': confidenceScore,
         'language': language,
         'createdAt': createdAt,
@@ -167,6 +171,7 @@ class ReportModel {
     String? approvedBy,
     String? approvedAt,
     int? version,
+    int? revision,
     double? confidenceScore,
     String? language,
     String? createdAt,
@@ -186,6 +191,7 @@ class ReportModel {
       approvedBy: approvedBy ?? this.approvedBy,
       approvedAt: approvedAt ?? this.approvedAt,
       version: version ?? this.version,
+      revision: revision ?? this.revision,
       confidenceScore: confidenceScore ?? this.confidenceScore,
       language: language ?? this.language,
       createdAt: createdAt ?? this.createdAt,
@@ -357,17 +363,20 @@ class ReportGenerateRequest {
 
 /// Request payload for updating report: PUT /api/v1/reports/:id.
 class ReportUpdateRequest {
+  final int expectedVersion;
   final String? title;
   final dynamic content;
   final String? type;
 
   const ReportUpdateRequest({
+    required this.expectedVersion,
     this.title,
     this.content,
     this.type,
   });
 
   Map<String, dynamic> toJson() => {
+      'expectedVersion': expectedVersion,
         if (title != null) 'title': title,
         if (content != null) 'content': content,
         if (type != null) 'type': type,
@@ -508,6 +517,7 @@ class ReviewItemModel {
   final int evidenceCount;
   final int daysPending;
   final ReportModel? report;
+  final int revision;
 
   const ReviewItemModel({
     required this.id,
@@ -520,6 +530,7 @@ class ReviewItemModel {
     this.evidenceCount = 0,
     this.daysPending = 0,
     this.report,
+    this.revision = 0,
   });
 
   factory ReviewItemModel.fromJson(Map<String, dynamic> json) {
@@ -577,12 +588,14 @@ class ReviewItemModel {
       evidenceCount: evCount,
       daysPending: days,
       report: reportObj,
+      revision: reportObj?.revision ?? json['__v'] as int? ?? 0,
     );
   }
 
   Map<String, dynamic> toJson() => {
         '_id': id,
         'reportId': reportId,
+        '__v': revision,
         'title': title,
         'type': type,
         'submittedBy': submittedBy,

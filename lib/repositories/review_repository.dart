@@ -7,8 +7,8 @@ import 'report_repository.dart';
 abstract class ReviewRepository {
   Future<List<ReviewItemModel>> getPendingReviews();
   Future<ReviewItemModel> getReviewById(String id);
-  Future<ReportModel> approveReview(String id);
-  Future<ReportModel> rejectReview(String id, String reason);
+  Future<ReportModel> approveReview(String id, {required int expectedVersion});
+  Future<ReportModel> rejectReview(String id, String reason, {required int expectedVersion});
 }
 
 /// Concrete implementation delegating to ReviewRemoteDataSource or Mock.
@@ -38,19 +38,19 @@ class ReviewRepositoryImpl extends BaseRepository implements ReviewRepository {
   }
 
   @override
-  Future<ReportModel> approveReview(String id) async {
+  Future<ReportModel> approveReview(String id, {required int expectedVersion}) async {
     if (isMockMode && mockRepository != null) {
-      return mockRepository!.approveReview(id);
+      return mockRepository!.approveReview(id, expectedVersion: expectedVersion);
     }
-    return execute(() => _remoteDataSource.approveReview(id));
+    return execute(() => _remoteDataSource.approveReview(id, expectedVersion: expectedVersion));
   }
 
   @override
-  Future<ReportModel> rejectReview(String id, String reason) async {
+  Future<ReportModel> rejectReview(String id, String reason, {required int expectedVersion}) async {
     if (isMockMode && mockRepository != null) {
-      return mockRepository!.rejectReview(id, reason);
+      return mockRepository!.rejectReview(id, reason, expectedVersion: expectedVersion);
     }
-    return execute(() => _remoteDataSource.rejectReview(id, reason));
+    return execute(() => _remoteDataSource.rejectReview(id, reason, expectedVersion: expectedVersion));
   }
 }
 
@@ -77,6 +77,7 @@ class MockReviewRepository implements ReviewRepository {
         evidenceCount: 3,
         daysPending: 2,
         report: r,
+        revision: r.revision,
       );
     }).toList();
   }
@@ -97,18 +98,19 @@ class MockReviewRepository implements ReviewRepository {
       evidenceCount: 3,
       daysPending: 2,
       report: report,
+      revision: report.revision,
     );
   }
 
   @override
-  Future<ReportModel> approveReview(String id) async {
+  Future<ReportModel> approveReview(String id, {required int expectedVersion}) async {
     final reportId = id.startsWith('rev_') ? id.substring(4) : id;
-    return _reportRepository.approveReport(reportId);
+    return _reportRepository.approveReport(reportId, expectedVersion: expectedVersion);
   }
 
   @override
-  Future<ReportModel> rejectReview(String id, String reason) async {
+  Future<ReportModel> rejectReview(String id, String reason, {required int expectedVersion}) async {
     final reportId = id.startsWith('rev_') ? id.substring(4) : id;
-    return _reportRepository.rejectReport(reportId, reason);
+    return _reportRepository.rejectReport(reportId, reason, expectedVersion: expectedVersion);
   }
 }
